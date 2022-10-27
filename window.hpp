@@ -23,9 +23,17 @@ public:
   
   void update()
   {
-    this->pollEvents();
-    this->updateMouse();
-    this->updateUI();
+    switch (this->state)
+    {
+      case build:
+        this->pollEventsBuild();
+        this->updateMouse();
+        this->updateUI();
+        break;
+      case solving:
+        this->pollEventsSolving();
+        break;
+    }
   }
   
   void render()
@@ -38,6 +46,12 @@ public:
     this->window->display();
   }
 private:
+  //state engine
+  enum states{
+    build,
+    solving
+  } state = build;
+  
   //window
   sf::RenderWindow *window;
   sf::VideoMode videoMode;
@@ -51,10 +65,19 @@ private:
   sf::Text solveText;
   sf::RectangleShape solveBox;
   
-  //logid
+  //logic
   std::vector<Node> nodes;
   
   //functions
+  //state engine
+  void setState(states newState)
+  {
+    if (this->state == build && newState == solving)
+    {
+      this->state = solving;
+    }
+  }  
+  
   void initVariables()
   {
     this->window = nullptr;
@@ -79,7 +102,27 @@ private:
     this->window->setFramerateLimit(60);
   }
   
-  void pollEvents()
+  void pollEventsBuild()
+  {
+    while (this->window->pollEvent(this->event))
+    {
+      switch (this->event.type)
+      {
+        case sf::Event::Closed:
+          this->window->close();
+          break;
+        case sf::Event::KeyPressed:
+          if (this->event.key.code == sf::Keyboard::Escape)
+            this->window->close();
+          if (this->event.key.code == sf::Keyboard::A)
+            this->spawnNode();
+          break;
+        default: break;
+      }
+    }
+  }
+  
+  void pollEventsSolving()
   {
     while (this->window->pollEvent(this->event))
     {
@@ -103,6 +146,12 @@ private:
     this->mousePosWindow = this->window->mapPixelToCoords(this->mousePosView);
   }
   
+  void spawnNode()
+  {
+    Node *newNode = new Node(this->mousePosWindow.x, this->mousePosWindow.y);
+    this->nodes.push_back(*newNode);
+  }
+  
   void updateUI()
   {
     if (this->solveBox.getGlobalBounds().contains(this->mousePosWindow))
@@ -110,7 +159,8 @@ private:
       this->solveBox.setFillColor(sf::Color(100, 100, 100, 255));
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
-        this->solveBox.setFillColor(sf::Color(200, 200, 200, 255));
+        this->solveBox.setFillColor(sf::Color(150, 150, 150, 255));
+        this->setState(solving);
       }
     }
     else
@@ -121,6 +171,10 @@ private:
   
   void drawNodes()
   {
+    for (int i=0; i<this->nodes.size(); i++)
+    {
+      this->window->draw(this->nodes[i].getCircle());
+    }
   }
   
   void drawUI()
