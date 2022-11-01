@@ -7,7 +7,8 @@ public:
   Node(int x, int y)
   {
     this->circle.setRadius(this->radius);
-    this->circle.setPosition(sf::Vector2f(x-10, y-10));
+    this->xpos = x;
+    this->ypos = y;
   }
   // ~Node() {}
   
@@ -15,6 +16,10 @@ public:
   {
     if (this->isAnimating)
     {
+      this->circle.setPosition(sf::Vector2f(this->xpos, this->ypos));
+      this->xpos -= 2;
+      this->ypos -= 2;
+      
       this->radius *= 1.5;
       this->circle.setRadius(this->radius);
       if (this->radius >= 10)
@@ -28,5 +33,7 @@ public:
 private:
   sf::CircleShape circle; 
   bool isAnimating = true;
-  float radius = 1;
+  float radius = 1.f;
+  int xpos;
+  int ypos;
 };

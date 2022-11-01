@@ -2,8 +2,13 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <time.h>
 
 #include "node.hpp"
+
+const int WINDOW_WIDTH = 1500;
+const int WINDOW_HEIGHT = 1000;
+
 
 class Window {
 public:
@@ -37,15 +42,20 @@ public:
         break;
       case solving:
         this->pollEventsSolving();
+        this->solve();
+        break;
+      case solved:
+        this->pollEventsSolving();
         break;
     }
   }
   
   void render()
   {
-    this->window->clear();
+    this->window->clear(sf::Color(20, 20, 26, 255));
     
     this->drawNodes();
+    this->drawLinks();
     this->drawUI();
     
     this->window->display();
@@ -55,7 +65,8 @@ private:
   enum states{
     build,
     generatingNodes,
-    solving
+    solving,
+    solved
   } state = build;
   
   //window
@@ -67,9 +78,12 @@ private:
   sf::Vector2f mousePosWindow;
   
   //ui
+  sf::RectangleShape UIShader;
+  
   sf::Font font;
+
   sf::Text solveText;
-  sf::RectangleShape solveBox;
+  sf::RectangleShape solveButton;
   
   sf::RectangleShape genSliderOutline;
   sf::RectangleShape genSliderBox;
@@ -79,6 +93,7 @@ private:
   
   //logic
   std::vector<Node> nodes;
+  std::vector<sf::RectangleShape> links;
   
   int genSliderNum;
   
@@ -98,6 +113,10 @@ private:
     {
       this->state = solving;
     }
+    else if (this->state == solving && newState == solved)
+    {
+      this->state = solved;
+    }
   }  
   
   void initVariables()
@@ -105,15 +124,18 @@ private:
     this->window = nullptr;
     
     //ui
+    this->UIShader.setSize(sf::Vector2f(300, 100));
+    this->UIShader.setFillColor(sf::Color(12, 12, 12, 150));
+    
     if (!font.loadFromFile("resources/Roboto/Roboto-Regular.ttf")) std::cout << "Failed to load font from file";
     this->solveText.setFont(this->font);
     this->solveText.setCharacterSize(15);
     this->solveText.setPosition(10, 50);
     this->solveText.setString("Solve");
     
-    this->solveBox.setPosition(sf::Vector2f(12, 50));
-    this->solveBox.setSize(sf::Vector2f(50, 20));
-    this->solveBox.setFillColor(sf::Color(30, 30, 30, 255));
+    this->solveButton.setPosition(sf::Vector2f(9, 50));
+    this->solveButton.setSize(sf::Vector2f(50, 20));
+    this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
     
     this->genSliderOutline.setPosition(sf::Vector2f(12, 10));
     this->genSliderOutline.setSize(sf::Vector2f(200, 15));
@@ -121,7 +143,7 @@ private:
     this->genSliderOutline.setOutlineColor(sf::Color::White);
     this->genSliderOutline.setOutlineThickness(1);
     
-    this->genSliderBox.setPosition(sf::Vector2f(12, 12));
+    this->genSliderBox.setPosition(sf::Vector2f(12, 11));
     this->genSliderBox.setSize(sf::Vector2f(10, 10));
     this->genSliderBox.setFillColor(sf::Color::White);
     
@@ -135,15 +157,15 @@ private:
     this->genSliderDescriptionText.setPosition(10, 30);
     this->genSliderDescriptionText.setString("Generate random nodes: ");
     
-    this->generateButton.setPosition(sf::Vector2f(30, 100));
-    this->generateButton.setSize(sf::Vector2f(100, 20));
+    this->generateButton.setPosition(sf::Vector2f(9, 30));
+    this->generateButton.setSize(sf::Vector2f(173, 20));
     this->generateButton.setFillColor(sf::Color(30, 30, 30, 255));
   }
   
   void initWindow()
   {
-    this->videoMode.height = 1000;
-    this->videoMode.width = 1500;
+    this->videoMode.width = WINDOW_WIDTH;
+    this->videoMode.height = WINDOW_HEIGHT;
     
     this->window = new sf::RenderWindow(this->videoMode, "Travelling Salesman");
     this->window->setFramerateLimit(60);
@@ -201,24 +223,24 @@ private:
   
   void updateUI()
   {
-    if (this->solveBox.getGlobalBounds().contains(this->mousePosWindow))
+    if (this->solveButton.getGlobalBounds().contains(this->mousePosWindow))
     {
-      this->solveBox.setFillColor(sf::Color(100, 100, 100, 255));
+      this->solveButton.setFillColor(sf::Color(100, 100, 100, 255));
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
-        this->solveBox.setFillColor(sf::Color(150, 150, 150, 255));
+        this->solveButton.setFillColor(sf::Color(150, 150, 150, 255));
         this->setState(solving);
       }
     }
     else
     {
-      this->solveBox.setFillColor(sf::Color(30, 30, 30, 255));
+      this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
     }
     
     if (this->genSliderOutline.getGlobalBounds().contains(this->mousePosWindow) && sf::Mouse::isButtonPressed(sf::Mouse::Left))
     {
-      this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 10));
-      this->genSliderNum = this->mousePosWindow.x - 12;
+      this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 11));
+      this->genSliderNum = (this->mousePosWindow.x - 12) / 2;
       this->genSliderNumText.setString(std::to_string(this->genSliderNum));
     }
     
@@ -239,12 +261,28 @@ private:
   
   void generateNodes()
   {
+    srand(time(NULL));
     for (int i=0; i<this->genSliderNum; i++)
     {
-      Node *newNode = new Node();
+      int x = rand() % WINDOW_WIDTH + 1;
+      int y = rand() % WINDOW_HEIGHT + 1;
+      Node *newNode = new Node(x, y);
       this->nodes.push_back(*newNode);
     }
     this->setState(build);
+  }
+  
+  void solve()
+  {
+    for (int i=0; i<this->nodes.size()-1; i++)
+    {
+      sf::RectangleShape link;
+      link.setPosition(sf::Vector2f(10, i));
+      link.setSize(sf::Vector2f(900, 1));
+      
+      this->links.push_back(link);
+    }
+    this->setState(solved);
   }
   
   void drawNodes()
@@ -255,9 +293,18 @@ private:
     }
   }
   
+  void drawLinks()
+  {
+    for (int i=0; i<this->links.size(); i++)
+    {
+      this->window->draw(this->links[i]);
+    }
+  }
+  
   void drawUI()
   {
-    this->window->draw(this->solveBox);
+    this->window->draw(this->UIShader);
+    this->window->draw(this->solveButton);
     this->window->draw(this->solveText);
     this->window->draw(this->genSliderOutline);
     this->window->draw(this->genSliderBox);
