@@ -9,6 +9,9 @@ public:
     this->circle.setRadius(this->radius);
     this->xpos = x;
     this->ypos = y;
+    
+    this->x = x;
+    this->y = y;
   }
   // ~Node() {}
   
@@ -29,6 +32,9 @@ public:
     }
     return this->circle;
   }
+  
+  int getx() { return this->x; }
+  int gety() { return this->y; }
 
 private:
   sf::CircleShape circle; 
@@ -36,4 +42,7 @@ private:
   float radius = 1.f;
   int xpos;
   int ypos;
+  
+  int x;
+  int y;
 };

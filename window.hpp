@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <math.h>
 #include <iostream>
 #include <vector>
 #include <random>
@@ -111,7 +112,14 @@ private:
     }
     else if (this->state == build && newState == solving)
     {
-      this->state = solving;
+      if (this->nodes.size() > 1)
+      {
+        this->state = solving;
+      }
+      else
+      {
+        std::cout << "There must be at least 2 nodes to solve\n";
+      }
     }
     else if (this->state == solving && newState == solved)
     {
@@ -274,15 +282,53 @@ private:
   
   void solve()
   {
-    for (int i=0; i<this->nodes.size()-1; i++)
+    for (int i=0; i<this->nodes.size(); i++)
     {
+      Node currentNode = this->nodes[i];
+      
       sf::RectangleShape link;
-      link.setPosition(sf::Vector2f(10, i));
-      link.setSize(sf::Vector2f(900, 1));
+      link.setPosition(sf::Vector2f(currentNode.getx()+2, currentNode.gety()));
+
+      if (i == this->nodes.size()-1)
+      {
+        Node firstNode = this->nodes[0];
+        float xlen = abs(currentNode.getx() - firstNode.getx());
+        float ylen = abs(currentNode.gety() - firstNode.gety());
+
+        float angle = this->findAngle(xlen, ylen);
+        float hypotenuse = this->findHypotenuse(xlen, ylen);
+
+        link.setRotation(angle);
+        link.setSize(sf::Vector2f(hypotenuse, 4));
+
+        this->links.push_back(link);
+        break;
+      }
+      
+      Node nextNode = this->nodes[i+1];
+      float xlen = abs(currentNode.getx() - nextNode.getx());
+      float ylen = abs(currentNode.gety() - nextNode.gety());
+
+      float angle = this->findAngle(xlen, ylen);
+      float hypotenuse = this->findHypotenuse(xlen, ylen);
+            
+      link.setRotation(angle);
+      link.setSize(sf::Vector2f(hypotenuse, 4));
       
       this->links.push_back(link);
     }
     this->setState(solved);
+  }
+  
+  float findAngle(float adjacent, float opposite)
+  {
+    float radians = tan(opposite / adjacent);
+    return radians * (180/3.141592653589793238462643383279502884197169399375105820974944);
+  }
+  
+  float findHypotenuse(int xlen, int ylen)
+  {
+    return sqrt((xlen * xlen) + (ylen * ylen));
   }
   
   void drawNodes()
