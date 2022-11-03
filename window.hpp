@@ -44,6 +44,11 @@ public:
       case solving:
         this->pollEventsSolving();
         this->solve();
+        this->shuffleNodes();
+        break;
+      case solvingAnt:
+        this->pollEventsSolving();
+        this->solveAnt();
         break;
       case solved:
         this->pollEventsSolving();
@@ -67,6 +72,7 @@ private:
     build,
     generatingNodes,
     solving,
+    solvingAnt,
     solved
   } state = build;
   
@@ -85,6 +91,8 @@ private:
 
   sf::Text solveText;
   sf::RectangleShape solveButton;
+  sf::Text solveAntText;
+  sf::RectangleShape solveAntButton;
   
   sf::RectangleShape genSliderOutline;
   sf::RectangleShape genSliderBox;
@@ -107,13 +115,13 @@ private:
   std::vector<Node> nodes;
   std::vector<sf::RectangleShape> links;
   
-  int totalSolutions = 5;
+  long totalSolutions;
   int solveStep = 0;
+  int shuffleIndex;
   
   int genSliderNum = 10;
   
-  float bestPathNum = 0.f;
-  float prevBestPathNum = 9999999999.f;
+  float prevBestDistance = 9999999999.f;
   
   //functions
   //state engine
@@ -131,6 +139,8 @@ private:
     {
       if (this->nodes.size() > 1)
       {
+        this->window->setFramerateLimit(165);
+        this->shuffleIndex = this->nodes.size()-1;
         this->state = solving;
       }
       else
@@ -138,8 +148,13 @@ private:
         std::cout << "There must be at least 2 nodes to solve\n";
       }
     }
+    else if (this->state == build && newState == solvingAnt)
+    {
+      this->state = solvingAnt;
+    }
     else if (this->state == solving && newState == solved)
     {
+      this->window->setFramerateLimit(60);
       this->state = solved;
     }
   }  
@@ -161,6 +176,15 @@ private:
     this->solveButton.setPosition(sf::Vector2f(9, 50));
     this->solveButton.setSize(sf::Vector2f(50, 20));
     this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
+    
+    this->solveAntText.setFont(this->font);
+    this->solveAntText.setCharacterSize(15);
+    this->solveAntText.setPosition(70, 50);
+    this->solveAntText.setString("Ant");
+    
+    this->solveAntButton.setPosition(sf::Vector2f(69, 50));
+    this->solveAntButton.setSize(sf::Vector2f(50, 20));
+    this->solveAntButton.setFillColor(sf::Color(30, 30, 30, 255));
     
     this->genSliderOutline.setPosition(sf::Vector2f(12, 10));
     this->genSliderOutline.setSize(sf::Vector2f(200, 15));
@@ -201,7 +225,6 @@ private:
     this->totalPossibleSolutionsVal.setFont(this->font);
     this->totalPossibleSolutionsVal.setCharacterSize(15);
     this->totalPossibleSolutionsVal.setPosition(sf::Vector2f(200, 90));
-    this->totalPossibleSolutionsVal.setString("5");
     
     this->searchedSolutionsText.setFont(this->font);
     this->searchedSolutionsText.setCharacterSize(15);
@@ -298,6 +321,20 @@ private:
       this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
     }
     
+    if (this->solveAntButton.getGlobalBounds().contains(this->mousePosWindow))
+    {
+      this->solveAntButton.setFillColor(sf::Color(100, 100, 100, 255));
+      if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+      {
+        this->solveAntButton.setFillColor(sf::Color(150, 150, 150, 255));
+        this->setState(solvingAnt);
+      }
+    }
+    else
+    {
+      this->solveAntButton.setFillColor(sf::Color(30, 30, 30, 255));
+    }
+    
     if (this->genSliderOutline.getGlobalBounds().contains(this->mousePosWindow) && sf::Mouse::isButtonPressed(sf::Mouse::Left))
     {
       this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 11));
@@ -337,28 +374,46 @@ private:
   
   void updatePossibleSolutionsText()
   {
+    if (this->numNodes < 2)
+    {
+      this->totalSolutions = 0;
+    }
+    else if (this->numNodes < 3)
+    {
+      this->totalSolutions = 1;
+    }
+    else
+    {
+      long factorial = 1;
+      for (int i=1; i<=(this->numNodes-1); i++)
+      {
+        factorial *= i;
+      }
+      this->totalSolutions = factorial / 2;
+    }
+
     this->numNodesVal.setString(std::to_string(this->numNodes));
-    this->totalSolutions = this->numNodes * 2;
     this->totalPossibleSolutionsVal.setString(std::to_string(this->totalSolutions));
   }
   
   void solve()
   {
     std::vector<sf::RectangleShape> currentLinks;
+    float totalDistance = 0;
 
     for (int i=0; i<this->nodes.size(); i++)
     {
       Node currentNode = this->nodes[i];
+      int currentx = currentNode.getx();
+      int currenty = currentNode.gety();
       
       sf::RectangleShape link;
       link.setFillColor(sf::Color(255, 255, 255, 80));
-      link.setPosition(sf::Vector2f(currentNode.getx()+1, currentNode.gety()));
+      link.setPosition(sf::Vector2f(currentx+1, currenty));
 
       if (i == this->nodes.size()-1)
       {
         Node firstNode = this->nodes[0];
-        int currentx = currentNode.getx();
-        int currenty = currentNode.gety();
         int firstx = firstNode.getx();
         int firsty = firstNode.gety();
         
@@ -384,13 +439,11 @@ private:
         link.setRotation(angle);
 
         currentLinks.push_back(link);
-        this->bestPathNum += hypotenuse;
+        totalDistance += hypotenuse;
         break;
       }
       
       Node nextNode = this->nodes[i+1];
-      int currentx = currentNode.getx();
-      int currenty = currentNode.gety();
       int nextx = nextNode.getx();
       int nexty = nextNode.gety();
       
@@ -416,18 +469,17 @@ private:
       link.setRotation(angle);
       
       currentLinks.push_back(link);
-      this->bestPathNum += hypotenuse;
+      totalDistance += hypotenuse;
     }
     
-    if (this->bestPathNum < this->prevBestPathNum)
+    if (totalDistance < this->prevBestDistance)
     {
-      this->prevBestPathNum = this->bestPathNum;
+      this->prevBestDistance = totalDistance;
       this->links = currentLinks;
       
-      this->bestPathVal.setString(std::to_string(this->prevBestPathNum));
+      this->bestPathVal.setString(std::to_string(this->prevBestDistance));
     }
     
-    this->bestPathNum = 0.f;
     this->solveStep++;
     this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
     if (this->solveStep >= this->totalSolutions)
@@ -448,6 +500,24 @@ private:
     return sqrt((xlen * xlen) + (ylen * ylen));
   }
   
+  void shuffleNodes()
+  {
+    if (this->shuffleIndex < 1)
+    {
+      this->shuffleIndex = this->nodes.size()-1;
+    }
+
+    Node temp = this->nodes[this->shuffleIndex];
+    this->nodes[this->shuffleIndex] = this->nodes[this->shuffleIndex-1];
+    this->nodes[this->shuffleIndex-1] = temp;
+    shuffleIndex--;
+  }
+  
+  void solveAnt()
+  {
+    return;
+  } 
+   
   void drawNodes()
   {
     for (int i=0; i<this->nodes.size(); i++)
@@ -469,6 +539,8 @@ private:
     this->window->draw(this->UIShader);
     this->window->draw(this->solveButton);
     this->window->draw(this->solveText);
+    this->window->draw(this->solveAntButton);
+    this->window->draw(this->solveAntText);
     this->window->draw(this->genSliderOutline);
     this->window->draw(this->genSliderBox);
     this->window->draw(this->generateButton);
