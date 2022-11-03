@@ -25,7 +25,7 @@ public:
       
       this->radius *= 1.5;
       this->circle.setRadius(this->radius);
-      if (this->radius >= 10)
+      if (this->radius >= 7)
       {
         this->isAnimating = false;
       }

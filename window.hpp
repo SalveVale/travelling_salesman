@@ -55,8 +55,8 @@ public:
   {
     this->window->clear(sf::Color(20, 20, 26, 255));
     
-    this->drawNodes();
     this->drawLinks();
+    this->drawNodes();
     this->drawUI();
     
     this->window->display();
@@ -92,11 +92,26 @@ private:
   sf::Text genSliderDescriptionText;
   sf::RectangleShape generateButton;
   
+  sf::Text numNodesText;
+  sf::Text numNodesVal;
+  sf::Text totalPossibleSolutionsText;
+  sf::Text totalPossibleSolutionsVal;
+  sf::Text searchedSolutionsText;
+  sf::Text searchedSolutionsVal;
+  
+  int numNodes = 0;
+  
   //logic
   std::vector<Node> nodes;
   std::vector<sf::RectangleShape> links;
   
+  int totalSolutions = 5;
+  int solveStep = 0;
+  
   int genSliderNum;
+  
+  float bestPathNum = 0.f;
+  float prevBestPathNum = 9999999999.f;
   
   //functions
   //state engine
@@ -168,6 +183,31 @@ private:
     this->generateButton.setPosition(sf::Vector2f(9, 30));
     this->generateButton.setSize(sf::Vector2f(173, 20));
     this->generateButton.setFillColor(sf::Color(30, 30, 30, 255));
+    
+    this->numNodesText.setFont(this->font);
+    this->numNodesText.setCharacterSize(15);
+    this->numNodesText.setPosition(sf::Vector2f(10, 70));
+    this->numNodesText.setString("Number of nodes:");
+    this->numNodesVal.setFont(this->font);
+    this->numNodesVal.setCharacterSize(15);
+    this->numNodesVal.setPosition(sf::Vector2f(200, 60));
+    
+    this->totalPossibleSolutionsText.setFont(this->font);
+    this->totalPossibleSolutionsText.setCharacterSize(15);
+    this->totalPossibleSolutionsText.setPosition(sf::Vector2f(10, 90));
+    this->totalPossibleSolutionsText.setString("Total Possible Solutions:");
+    this->totalPossibleSolutionsVal.setFont(this->font);
+    this->totalPossibleSolutionsVal.setCharacterSize(15);
+    this->totalPossibleSolutionsVal.setPosition(sf::Vector2f(200, 90));
+    this->totalPossibleSolutionsVal.setString("5");
+    
+    this->searchedSolutionsText.setFont(this->font);
+    this->searchedSolutionsText.setCharacterSize(15);
+    this->searchedSolutionsText.setPosition(sf::Vector2f(10, 110));
+    this->searchedSolutionsText.setString("Searched solutions:");
+    this->searchedSolutionsVal.setFont(this->font);
+    this->searchedSolutionsVal.setCharacterSize(15);
+    this->searchedSolutionsVal.setPosition(sf::Vector2f(200, 110));
   }
   
   void initWindow()
@@ -227,6 +267,9 @@ private:
   {
     Node *newNode = new Node(this->mousePosWindow.x, this->mousePosWindow.y);
     this->nodes.push_back(*newNode);
+    
+    this->numNodes++;
+    this->numNodesVal.setString(std::to_string(this->numNodes));
   }
   
   void updateUI()
@@ -276,54 +319,109 @@ private:
       int y = rand() % WINDOW_HEIGHT + 1;
       Node *newNode = new Node(x, y);
       this->nodes.push_back(*newNode);
+      this->numNodes++;
     }
+    this->numNodesVal.setString(std::to_string(this->numNodes));
     this->setState(build);
   }
   
   void solve()
   {
+    std::vector<sf::RectangleShape> currentLinks;
+
     for (int i=0; i<this->nodes.size(); i++)
     {
       Node currentNode = this->nodes[i];
       
       sf::RectangleShape link;
-      link.setPosition(sf::Vector2f(currentNode.getx()+2, currentNode.gety()));
+      link.setFillColor(sf::Color(255, 255, 255, 80));
+      link.setPosition(sf::Vector2f(currentNode.getx()+1, currentNode.gety()));
 
       if (i == this->nodes.size()-1)
       {
         Node firstNode = this->nodes[0];
-        float xlen = abs(currentNode.getx() - firstNode.getx());
-        float ylen = abs(currentNode.gety() - firstNode.gety());
+        int currentx = currentNode.getx();
+        int currenty = currentNode.gety();
+        int firstx = firstNode.getx();
+        int firsty = firstNode.gety();
+        
+        float xlen, ylen, hypotenuse;
+        
+        if (currentx < firstx)
+        {
+          xlen = firstx - currentx;
+          ylen = firsty - currenty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(hypotenuse, 2));
+        }
+        else
+        {
+          xlen = currentx - firstx;
+          ylen = currenty - firsty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(-hypotenuse, 2));
+        }
 
         float angle = this->findAngle(xlen, ylen);
-        float hypotenuse = this->findHypotenuse(xlen, ylen);
-
+        
         link.setRotation(angle);
-        link.setSize(sf::Vector2f(hypotenuse, 4));
 
-        this->links.push_back(link);
+        currentLinks.push_back(link);
+        this->bestPathNum += hypotenuse;
         break;
       }
       
       Node nextNode = this->nodes[i+1];
-      float xlen = abs(currentNode.getx() - nextNode.getx());
-      float ylen = abs(currentNode.gety() - nextNode.gety());
+      int currentx = currentNode.getx();
+      int currenty = currentNode.gety();
+      int nextx = nextNode.getx();
+      int nexty = nextNode.gety();
+      
+      float xlen, ylen, hypotenuse;
+      
+      if (currentx < nextx)
+      {
+        xlen = nextx - currentx;
+        ylen = nexty - currenty;
+        hypotenuse = this->findHypotenuse(xlen, ylen);
+        link.setSize(sf::Vector2f(hypotenuse, 2));
+      }
+      else
+      {
+        xlen = currentx - nextx;
+        ylen = currenty - nexty;
+        hypotenuse = this->findHypotenuse(xlen, ylen);
+        link.setSize(sf::Vector2f(-hypotenuse, 2));
+      }
 
       float angle = this->findAngle(xlen, ylen);
-      float hypotenuse = this->findHypotenuse(xlen, ylen);
             
       link.setRotation(angle);
-      link.setSize(sf::Vector2f(hypotenuse, 4));
       
-      this->links.push_back(link);
+      currentLinks.push_back(link);
+      this->bestPathNum += hypotenuse;
     }
-    this->setState(solved);
+    
+    if (this->bestPathNum < this->prevBestPathNum)
+    {
+      this->prevBestPathNum = this->bestPathNum;
+      this->links = currentLinks;
+    }
+    
+    this->bestPathNum = 0.f;
+    this->solveStep++;
+    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    if (this->solveStep >= this->totalSolutions)
+    {
+      this->solveStep = 0;
+      this->setState(solved);
+    }
   }
   
   float findAngle(float adjacent, float opposite)
   {
-    float radians = tan(opposite / adjacent);
-    return radians * (180/3.141592653589793238462643383279502884197169399375105820974944);
+    float radians = atan(opposite / adjacent);
+    return (radians * (180 / 3.14159265358979));
   }
   
   float findHypotenuse(int xlen, int ylen)
@@ -357,5 +455,11 @@ private:
     this->window->draw(this->generateButton);
     this->window->draw(this->genSliderNumText);
     this->window->draw(this->genSliderDescriptionText);
+    this->window->draw(this->numNodesText);
+    this->window->draw(this->numNodesVal);
+    this->window->draw(this->totalPossibleSolutionsText);
+    this->window->draw(this->totalPossibleSolutionsVal);
+    this->window->draw(this->searchedSolutionsText);
+    this->window->draw(this->searchedSolutionsVal);
   }
 };
