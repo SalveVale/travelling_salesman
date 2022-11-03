@@ -98,6 +98,8 @@ private:
   sf::Text totalPossibleSolutionsVal;
   sf::Text searchedSolutionsText;
   sf::Text searchedSolutionsVal;
+  sf::Text bestPathText;
+  sf::Text bestPathVal;
   
   int numNodes = 0;
   
@@ -108,7 +110,7 @@ private:
   int totalSolutions = 5;
   int solveStep = 0;
   
-  int genSliderNum;
+  int genSliderNum = 10;
   
   float bestPathNum = 0.f;
   float prevBestPathNum = 9999999999.f;
@@ -147,7 +149,7 @@ private:
     this->window = nullptr;
     
     //ui
-    this->UIShader.setSize(sf::Vector2f(300, 100));
+    this->UIShader.setSize(sf::Vector2f(300, 170));
     this->UIShader.setFillColor(sf::Color(12, 12, 12, 150));
     
     if (!font.loadFromFile("resources/Roboto/Roboto-Regular.ttf")) std::cout << "Failed to load font from file";
@@ -208,6 +210,14 @@ private:
     this->searchedSolutionsVal.setFont(this->font);
     this->searchedSolutionsVal.setCharacterSize(15);
     this->searchedSolutionsVal.setPosition(sf::Vector2f(200, 110));
+    
+    this->bestPathText.setFont(this->font);
+    this->bestPathText.setCharacterSize(15);
+    this->bestPathText.setPosition(sf::Vector2f(10, 130));
+    this->bestPathText.setString("Lenght of best path:");
+    this->bestPathVal.setFont(this->font);
+    this->bestPathVal.setCharacterSize(15);
+    this->bestPathVal.setPosition(sf::Vector2f(200, 130));
   }
   
   void initWindow()
@@ -269,7 +279,7 @@ private:
     this->nodes.push_back(*newNode);
     
     this->numNodes++;
-    this->numNodesVal.setString(std::to_string(this->numNodes));
+    this->updatePossibleSolutionsText();
   }
   
   void updateUI()
@@ -321,8 +331,15 @@ private:
       this->nodes.push_back(*newNode);
       this->numNodes++;
     }
-    this->numNodesVal.setString(std::to_string(this->numNodes));
+    this->updatePossibleSolutionsText();
     this->setState(build);
+  }
+  
+  void updatePossibleSolutionsText()
+  {
+    this->numNodesVal.setString(std::to_string(this->numNodes));
+    this->totalSolutions = this->numNodes * 2;
+    this->totalPossibleSolutionsVal.setString(std::to_string(this->totalSolutions));
   }
   
   void solve()
@@ -406,6 +423,8 @@ private:
     {
       this->prevBestPathNum = this->bestPathNum;
       this->links = currentLinks;
+      
+      this->bestPathVal.setString(std::to_string(this->prevBestPathNum));
     }
     
     this->bestPathNum = 0.f;
@@ -461,5 +480,7 @@ private:
     this->window->draw(this->totalPossibleSolutionsVal);
     this->window->draw(this->searchedSolutionsText);
     this->window->draw(this->searchedSolutionsVal);
+    this->window->draw(this->bestPathText);
+    this->window->draw(this->bestPathVal);
   }
 };
