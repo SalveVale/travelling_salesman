@@ -4,7 +4,7 @@
 
 class Node {
 public:
-  Node(int x, int y)
+  Node(int x, int y, int index)
   {
     this->circle.setRadius(this->radius);
     this->xpos = x;
@@ -12,6 +12,8 @@ public:
     
     this->x = x;
     this->y = y;
+    
+    this->index = index;
   }
   // ~Node() {}
   
@@ -35,6 +37,8 @@ public:
   
   int getx() { return this->x; }
   int gety() { return this->y; }
+  
+  int getIndex() { return this->index; }
 
 private:
   sf::CircleShape circle; 
@@ -45,4 +49,6 @@ private:
   
   int x;
   int y;
+  
+  int index;
 };

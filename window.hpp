@@ -298,7 +298,7 @@ private:
   
   void spawnNode()
   {
-    Node *newNode = new Node(this->mousePosWindow.x, this->mousePosWindow.y);
+    Node *newNode = new Node(this->mousePosWindow.x, this->mousePosWindow.y, this->numNodes);
     this->nodes.push_back(*newNode);
     
     this->numNodes++;
@@ -364,7 +364,7 @@ private:
     {
       int x = rand() % WINDOW_WIDTH + 1;
       int y = rand() % WINDOW_HEIGHT + 1;
-      Node *newNode = new Node(x, y);
+      Node *newNode = new Node(x, y, this->numNodes);
       this->nodes.push_back(*newNode);
       this->numNodes++;
     }
@@ -502,15 +502,42 @@ private:
   
   void shuffleNodes()
   {
-    if (this->shuffleIndex < 1)
-    {
-      this->shuffleIndex = this->nodes.size()-1;
-    }
+    std::random_shuffle(this->nodes.begin(), this->nodes.end());
+    
+    
+    // if (this->shuffleIndex < 1)
+    // {
+    //   this->shuffleIndex = this->nodes.size()-1;
+    // }
+    
+    // Node temp = this->nodes[this->shuffleIndex];
+    // this->nodes[this->shuffleIndex] = this->nodes[this->shuffleIndex-1];
+    // this->nodes[this->shuffleIndex-1] = temp;
+    // shuffleIndex--;
+    // for (int i=0; i<this->nodes.size(); i++)
+    // {
+    //   std::cout << this->nodes[i].getIndex();
+    // }
+    // std::cout << std::endl;
 
-    Node temp = this->nodes[this->shuffleIndex];
-    this->nodes[this->shuffleIndex] = this->nodes[this->shuffleIndex-1];
-    this->nodes[this->shuffleIndex-1] = temp;
-    shuffleIndex--;
+    
+    // int arrayIndeces[this->nodes.size()];
+    // std::vector<int> arrayIndeces;
+    // for (int i=0; i<this->nodes.size(); i++)
+    // {
+    //   // arrayIndeces[i] = this->nodes[i].getIndex();
+    //   arrayIndeces.push_back(this->nodes[i].getIndex());
+    // }
+    // std::next_permutation(arrayIndeces.begin(), arrayIndeces.end());
+    
+    // std::vector<Node> tempVec = this->nodes;
+    // for(int i=0; i<this->nodes.size(); i++)
+    // {
+    //   tempVec[i] = this->nodes[arrayIndeces[i]];
+    //   std::cout << arrayIndeces[i];
+    // }
+    // std::cout << std::endl;
+    // this->nodes = tempVec;
   }
   
   void solveAnt()
