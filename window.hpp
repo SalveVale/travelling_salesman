@@ -10,7 +10,6 @@
 const int WINDOW_WIDTH = 1500;
 const int WINDOW_HEIGHT = 1000;
 
-
 class Window {
 public:
   Window()
@@ -37,9 +36,8 @@ public:
         this->updateMouse();
         this->updateUI();
         break;
-      case generatingNodes:
-        this->pollEventsSolving();
-        this->generateNodes();
+      case buttonClicked:
+        this->pollEventsButtonClicked();
         break;
       case solving:
         this->pollEventsSolving();
@@ -51,14 +49,14 @@ public:
         this->solveAnt();
         break;
       case solved:
-        this->pollEventsSolving();
+        this->pollEventsBasic();
         break;
     }
   }
   
   void render()
   {
-    this->window->clear(sf::Color(20, 20, 26, 255));
+    this->window->clear(this->colBG);
     
     this->drawLinks();
     this->drawNodes();
@@ -70,7 +68,7 @@ private:
   //state engine
   enum states{
     build,
-    generatingNodes,
+    buttonClicked,
     solving,
     solvingAnt,
     solved
@@ -80,6 +78,7 @@ private:
   sf::RenderWindow *window;
   sf::VideoMode videoMode;
   sf::Event event;
+  sf::Color colBG = sf::Color(20, 20, 26, 255);
   
   sf::Vector2i mousePosView;
   sf::Vector2f mousePosWindow;
@@ -127,11 +126,11 @@ private:
   //state engine
   void setState(states newState)
   {
-    if (this->state == build && newState == generatingNodes)
+    if (this->state == build && newState == buttonClicked)
     {
-      this->state = generatingNodes;
+      this->state = buttonClicked;
     }
-    else if (this->state == generatingNodes && newState == build)
+    else if (this->state == buttonClicked && newState == build)
     {
       this->state = build;
     }
@@ -154,6 +153,7 @@ private:
     }
     else if (this->state == solving && newState == solved)
     {
+      this->colBG = sf::Color(20, 26, 20, 255);
       this->window->setFramerateLimit(60);
       this->state = solved;
     }
@@ -272,7 +272,48 @@ private:
     }
   }
   
+  void pollEventsButtonClicked()
+  {
+    while (this->window->pollEvent(this->event))
+    {
+      switch (this->event.type)
+      {
+        case sf::Event::Closed:
+          this->window->close();
+          break;
+        case sf::Event::KeyPressed:
+          if (this->event.key.code == sf::Keyboard::Escape)
+            this->window->close();
+          break;
+        default: break;
+      }
+    }
+    
+    if (!sf::Mouse::isButtonPressed(sf::Mouse::Left))
+      this->setState(build);
+  }
+  
   void pollEventsSolving()
+  {
+    while (this->window->pollEvent(this->event))
+    {
+      switch (this->event.type)
+      {
+        case sf::Event::Closed:
+          this->window->close();
+          break;
+        case sf::Event::KeyPressed:
+          if (this->event.key.code == sf::Keyboard::Escape)
+            this->window->close();
+          if (this->event.key.code == sf::Keyboard::Space)
+            this->setState(solved);
+          break;
+        default: break;
+      }
+    }
+  }
+  
+  void pollEventsBasic()
   {
     while (this->window->pollEvent(this->event))
     {
@@ -348,7 +389,8 @@ private:
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
         this->generateButton.setFillColor(sf::Color(150, 150, 150, 255));
-        this->setState(generatingNodes);
+        this->generateNodes();
+        this->setState(buttonClicked);
       }
     }
     else
