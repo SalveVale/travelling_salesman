@@ -10,6 +10,8 @@
 const int WINDOW_WIDTH = 1500;
 const int WINDOW_HEIGHT = 1000;
 
+const float desirabilityModifier = 0.15;
+
 class Window {
 public:
   Window()
@@ -113,6 +115,7 @@ private:
   //logic
   std::vector<Node> nodes;
   std::vector<sf::RectangleShape> links;
+  std::vector<Node> visitedNodesInOrder;
   
   long totalSolutions;
   int solveStep = 0;
@@ -149,9 +152,16 @@ private:
     }
     else if (this->state == build && newState == solvingAnt)
     {
+      this->window->setFramerateLimit(165);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
+    {
+      this->colBG = sf::Color(20, 26, 20, 255);
+      this->window->setFramerateLimit(60);
+      this->state = solved;
+    }
+    else if (this->state == solvingAnt && newState == solved)
     {
       this->colBG = sf::Color(20, 26, 20, 255);
       this->window->setFramerateLimit(60);
@@ -440,7 +450,6 @@ private:
   
   void solve()
   {
-    std::vector<sf::RectangleShape> currentLinks;
     float totalDistance = 0;
 
     for (int i=0; i<this->nodes.size(); i++)
@@ -449,8 +458,46 @@ private:
       int currentx = currentNode.getx();
       int currenty = currentNode.gety();
       
+      Node nextNode = this->nodes[i+1];
+      int nextx = nextNode.getx();
+      int nexty = nextNode.gety();
+      
+      int xlen = abs(currentx - nextx);
+      int ylen = abs(currenty - nexty);
+      float hypotenuse = this->findHypotenuse(xlen, ylen);
+      totalDistance += hypotenuse;
+    }
+    
+    if (totalDistance < this->prevBestDistance)
+    {
+      this->prevBestDistance = totalDistance;
+      
+      this->bestPathVal.setString(std::to_string(this->prevBestDistance));
+      
+      this->generateLinks();
+    }
+    
+    this->solveStep++;
+    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    if (this->solveStep >= this->totalSolutions)
+    {
+      this->solveStep = 0;
+      this->setState(solved);
+    }
+  }
+  
+  void generateLinks()
+  {
+    this->links.clear();
+    // std::vector<sf::RectangleShape> currentLinks;
+
+    for (int i=0; i<this->nodes.size(); i++)
+    {
+      Node currentNode = this->nodes[i];
+      int currentx = currentNode.getx();
+      int currenty = currentNode.gety();
+      
       sf::RectangleShape link;
-      link.setFillColor(sf::Color(255, 255, 255, 80));
       link.setPosition(sf::Vector2f(currentx+1, currenty));
 
       if (i == this->nodes.size()-1)
@@ -479,9 +526,10 @@ private:
         float angle = this->findAngle(xlen, ylen);
         
         link.setRotation(angle);
+        float desirabilityColor = firstNode.getDesirability() * 100;
+        link.setFillColor(sf::Color(255, 255, 255, desirabilityColor));
 
-        currentLinks.push_back(link);
-        totalDistance += hypotenuse;
+        this->links.push_back(link);
         break;
       }
       
@@ -509,25 +557,10 @@ private:
       float angle = this->findAngle(xlen, ylen);
             
       link.setRotation(angle);
+      float desirabilityColor = nextNode.getDesirability() * 100;
+      link.setFillColor(sf::Color(255, 255, 255, desirabilityColor));
       
-      currentLinks.push_back(link);
-      totalDistance += hypotenuse;
-    }
-    
-    if (totalDistance < this->prevBestDistance)
-    {
-      this->prevBestDistance = totalDistance;
-      this->links = currentLinks;
-      
-      this->bestPathVal.setString(std::to_string(this->prevBestDistance));
-    }
-    
-    this->solveStep++;
-    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
-    if (this->solveStep >= this->totalSolutions)
-    {
-      this->solveStep = 0;
-      this->setState(solved);
+      this->links.push_back(link);
     }
   }
   
@@ -584,8 +617,79 @@ private:
   
   void solveAnt()
   {
-    return;
+    /*
+    x get distances to all nodes and set desirability based on those distances
+    x randomly choose a node to go to, remove that node from potential nodes to visit and save it to list of visited nodes
+    x repeat until all nodes are visited
+    - save the path taken as a pharamone trail for the next iteration
+    */
+
+    Node firstNode = this->nodes[0];
+    int firstx = firstNode.getx();
+    int firsty = firstNode.gety();
+    
+    std::vector<Node> unvisitedNodes;
+
+    for (int i=1; i<this->nodes.size()-1; i++)
+    {
+      Node nextNode = this->nodes[i];
+      int nextx = nextNode.getx();
+      int nexty = nextNode.gety();
+
+      int xlen, ylen;
+      float hypotenuse;
+      
+      xlen = abs(firstx - nextx);
+      ylen = abs(firsty - nexty);
+      hypotenuse = this->findHypotenuse(xlen, ylen);
+
+      // if (currentx < nextx)
+      // {
+      //   xlen = nextx - currentx;
+      //   ylen = nexty - currenty;
+      // }
+      // else
+      // {
+      //   xlen = currentx - nextx;
+      //   ylen = currenty - nexty;
+      // }
+      // hypotenuse = this->findHypotenuse(xlen, ylen);
+      
+      nextNode.setDesirability(hypotenuse, desirabilityModifier);
+      
+      unvisitedNodes.push_back(nextNode);
+
+      std::cout << nextNode.getDesirability() << ", ";
+    }
+    std::cout << std::endl;
+    
+    // this->nodes.clear();
+    // this->chooseNextNode(unvisitedNodes);
+    this->generateLinks();
+        
+    this->setState(solved);
   } 
+  
+  void chooseNextNode(std::vector<Node> unvisitedNodes)
+  {
+    srand(time(NULL));
+    float bestDesirability = 0;
+    Node *bestNode;
+    for (int i=0; i<unvisitedNodes.size(); i++)
+    {
+      int n = rand() % unvisitedNodes.size();
+      float total = n * unvisitedNodes[i].getDesirability();
+      if (total > bestDesirability)
+      {
+        bestDesirability = total;
+        bestNode = &unvisitedNodes[i];
+      }
+    }
+    this->nodes.push_back(*bestNode);
+    unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
+    
+    if (unvisitedNodes.size() > 1) this->chooseNextNode(unvisitedNodes);
+  }
    
   void drawNodes()
   {

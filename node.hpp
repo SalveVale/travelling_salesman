@@ -2,6 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <math.h>
+
 class Node {
 public:
   Node(int x, int y, int index)
@@ -39,7 +41,14 @@ public:
   int gety() { return this->y; }
   
   int getIndex() { return this->index; }
-
+  
+  void setDesirability(float distance, float desirabilityModifier)
+  {
+    this->desirability = pow(1/distance, desirabilityModifier);
+  }
+  
+  float getDesirability() { return this->desirability; }
+  
 private:
   sf::CircleShape circle; 
   bool isAnimating = true;
@@ -51,4 +60,6 @@ private:
   int y;
   
   int index;
+  
+  float desirability = 0.8;
 };
