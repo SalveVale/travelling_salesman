@@ -52,6 +52,8 @@ public:
         break;
       case solved:
         this->pollEventsBasic();
+        this->updateMouse();
+        this->updateResetButton();
         break;
     }
   }
@@ -94,6 +96,9 @@ private:
   sf::RectangleShape solveButton;
   sf::Text solveAntText;
   sf::RectangleShape solveAntButton;
+  
+  sf::Text resetText;
+  sf::RectangleShape resetButton;
   
   sf::RectangleShape genSliderOutline;
   sf::RectangleShape genSliderBox;
@@ -167,6 +172,12 @@ private:
       this->window->setFramerateLimit(60);
       this->state = solved;
     }
+    else if (this->state == solved && newState == build)
+    {
+      this->links.clear();
+      this->resetUI();
+      this->state = build;
+    }
   }  
   
   void initVariables()
@@ -180,21 +191,30 @@ private:
     if (!font.loadFromFile("resources/Roboto/Roboto-Regular.ttf")) std::cout << "Failed to load font from file";
     this->solveText.setFont(this->font);
     this->solveText.setCharacterSize(15);
-    this->solveText.setPosition(10, 50);
+    this->solveText.setPosition(15, 140);
     this->solveText.setString("Solve");
     
-    this->solveButton.setPosition(sf::Vector2f(9, 50));
+    this->solveButton.setPosition(sf::Vector2f(9, 140));
     this->solveButton.setSize(sf::Vector2f(50, 20));
     this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
     
     this->solveAntText.setFont(this->font);
     this->solveAntText.setCharacterSize(15);
-    this->solveAntText.setPosition(70, 50);
+    this->solveAntText.setPosition(80, 140);
     this->solveAntText.setString("Ant");
     
-    this->solveAntButton.setPosition(sf::Vector2f(69, 50));
+    this->solveAntButton.setPosition(sf::Vector2f(69, 140));
     this->solveAntButton.setSize(sf::Vector2f(50, 20));
     this->solveAntButton.setFillColor(sf::Color(30, 30, 30, 255));
+
+    this->resetText.setFont(this->font);
+    this->resetText.setCharacterSize(15);
+    this->resetText.setPosition(15, 170);
+    this->resetText.setString("Reset");
+    
+    this->resetButton.setPosition(sf::Vector2f(9, 170));
+    this->resetButton.setSize(sf::Vector2f(50, 20));
+    this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
     
     this->genSliderOutline.setPosition(sf::Vector2f(12, 10));
     this->genSliderOutline.setSize(sf::Vector2f(200, 15));
@@ -222,35 +242,35 @@ private:
     
     this->numNodesText.setFont(this->font);
     this->numNodesText.setCharacterSize(15);
-    this->numNodesText.setPosition(sf::Vector2f(10, 70));
+    this->numNodesText.setPosition(sf::Vector2f(10, 50));
     this->numNodesText.setString("Number of nodes:");
     this->numNodesVal.setFont(this->font);
     this->numNodesVal.setCharacterSize(15);
-    this->numNodesVal.setPosition(sf::Vector2f(200, 60));
+    this->numNodesVal.setPosition(sf::Vector2f(200, 50));
     
     this->totalPossibleSolutionsText.setFont(this->font);
     this->totalPossibleSolutionsText.setCharacterSize(15);
-    this->totalPossibleSolutionsText.setPosition(sf::Vector2f(10, 90));
+    this->totalPossibleSolutionsText.setPosition(sf::Vector2f(10, 70));
     this->totalPossibleSolutionsText.setString("Total Possible Solutions:");
     this->totalPossibleSolutionsVal.setFont(this->font);
     this->totalPossibleSolutionsVal.setCharacterSize(15);
-    this->totalPossibleSolutionsVal.setPosition(sf::Vector2f(200, 90));
+    this->totalPossibleSolutionsVal.setPosition(sf::Vector2f(200, 70));
     
     this->searchedSolutionsText.setFont(this->font);
     this->searchedSolutionsText.setCharacterSize(15);
-    this->searchedSolutionsText.setPosition(sf::Vector2f(10, 110));
+    this->searchedSolutionsText.setPosition(sf::Vector2f(10, 90));
     this->searchedSolutionsText.setString("Searched solutions:");
     this->searchedSolutionsVal.setFont(this->font);
     this->searchedSolutionsVal.setCharacterSize(15);
-    this->searchedSolutionsVal.setPosition(sf::Vector2f(200, 110));
+    this->searchedSolutionsVal.setPosition(sf::Vector2f(200, 90));
     
     this->bestPathText.setFont(this->font);
     this->bestPathText.setCharacterSize(15);
-    this->bestPathText.setPosition(sf::Vector2f(10, 130));
+    this->bestPathText.setPosition(sf::Vector2f(10, 110));
     this->bestPathText.setString("Lenght of best path:");
     this->bestPathVal.setFont(this->font);
     this->bestPathVal.setCharacterSize(15);
-    this->bestPathVal.setPosition(sf::Vector2f(200, 130));
+    this->bestPathVal.setPosition(sf::Vector2f(200, 110));
   }
   
   void initWindow()
@@ -356,6 +376,23 @@ private:
     this->updatePossibleSolutionsText();
   }
   
+  void updateResetButton()
+  {
+    if (this->resetButton.getGlobalBounds().contains(this->mousePosWindow))
+    {
+      this->resetButton.setFillColor(sf::Color(100, 100, 100, 255));
+      if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+      {
+        this->resetButton.setFillColor(sf::Color(150, 150, 150, 255));
+        this->setState(build);
+      }
+    }
+    else
+    {
+      this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
+    }
+  }
+  
   void updateUI()
   {
     if (this->solveButton.getGlobalBounds().contains(this->mousePosWindow))
@@ -407,6 +444,14 @@ private:
     {
       this->generateButton.setFillColor(sf::Color(30, 30, 30, 255));
     }
+  }
+  
+  void resetUI()
+  {
+    this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
+    
+    this->bestPathVal.setString("");
+    this->searchedSolutionsVal.setString("");
   }
   
   void generateNodes()
@@ -727,5 +772,7 @@ private:
     this->window->draw(this->searchedSolutionsVal);
     this->window->draw(this->bestPathText);
     this->window->draw(this->bestPathVal);
+    this->window->draw(this->resetButton);
+    this->window->draw(this->resetText);
   }
 };
