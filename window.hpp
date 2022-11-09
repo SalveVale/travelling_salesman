@@ -544,6 +544,7 @@ private:
       
       sf::RectangleShape link;
       link.setPosition(sf::Vector2f(currentx+1, currenty));
+      link.setFillColor(sf::Color(255, 255, 255, 80));
 
       if (i == this->nodes.size()-1)
       {
@@ -571,8 +572,6 @@ private:
         float angle = this->findAngle(xlen, ylen);
         
         link.setRotation(angle);
-        float desirabilityColor = firstNode.getDesirability() * 100;
-        link.setFillColor(sf::Color(255, 255, 255, desirabilityColor));
 
         this->links.push_back(link);
         break;
@@ -602,8 +601,6 @@ private:
       float angle = this->findAngle(xlen, ylen);
             
       link.setRotation(angle);
-      float desirabilityColor = nextNode.getDesirability() * 100;
-      link.setFillColor(sf::Color(255, 255, 255, desirabilityColor));
       
       this->links.push_back(link);
     }
@@ -701,40 +698,71 @@ private:
       // hypotenuse = this->findHypotenuse(xlen, ylen);
       
       nextNode.setDesirability(hypotenuse, desirabilityModifier);
-      
-      unvisitedNodes.push_back(nextNode);
-
-      std::cout << nextNode.getDesirability() << ", ";
     }
     std::cout << std::endl;
     
-    // this->nodes.clear();
+    unvisitedNodes = this->nodes;
+    this->nodes.clear();
     // this->chooseNextNode(unvisitedNodes);
+    
+    do {
+      srand(time(NULL));
+      float bestDesirability = 0;
+      Node *bestNode;
+      for (int i=0; i<unvisitedNodes.size(); i++)
+      {
+        int randomModifier = rand() % 10;
+        float total = randomModifier * unvisitedNodes[i].getDesirability();
+        // std::cout << total << ", ";
+        if (total > bestDesirability)
+        {
+          bestDesirability = total;
+          bestNode = &unvisitedNodes[i];
+        }
+      }
+      this->nodes.push_back(*bestNode);
+      
+      for (int i=bestNode->getIndex()+1; i<unvisitedNodes.size(); i++)
+      {
+        unvisitedNodes[i].decrementIndex();
+      }
+
+      unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
+    } while (unvisitedNodes.size() > 1);
+
     this->generateLinks();
         
+    this->solveStep++;
+    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    if (this->solveStep >= this->totalSolutions)
+    {
+      this->solveStep = 0;
+      this->setState(solved);
+    }
     this->setState(solved);
   } 
   
-  void chooseNextNode(std::vector<Node> unvisitedNodes)
-  {
-    srand(time(NULL));
-    float bestDesirability = 0;
-    Node *bestNode;
-    for (int i=0; i<unvisitedNodes.size(); i++)
-    {
-      int n = rand() % unvisitedNodes.size();
-      float total = n * unvisitedNodes[i].getDesirability();
-      if (total > bestDesirability)
-      {
-        bestDesirability = total;
-        bestNode = &unvisitedNodes[i];
-      }
-    }
-    this->nodes.push_back(*bestNode);
-    unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
+  // void chooseNextNode(std::vector<Node> unvisitedNodes)
+  // {
+  //   srand(time(NULL));
+  //   float bestDesirability = 0;
+  //   Node *bestNode;
+  //   for (int i=0; i<unvisitedNodes.size(); i++)
+  //   {
+  //     int randomModifier = rand() % 10;
+  //     float total = randomModifier * unvisitedNodes[i].getDesirability();
+  //     if (total > bestDesirability)
+  //     {
+  //       bestDesirability = total;
+  //       bestNode = &unvisitedNodes[i];
+  //     }
+  //   }
+  //   this->nodes.push_back(*bestNode);
+  //   unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
+  //   std::cout << unvisitedNodes.size() << " " << this->nodes.size() << std::endl;
     
-    if (unvisitedNodes.size() > 1) this->chooseNextNode(unvisitedNodes);
-  }
+  //   if (unvisitedNodes.size() > 1) this->chooseNextNode(unvisitedNodes);
+  // }
    
   void drawNodes()
   {

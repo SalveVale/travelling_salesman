@@ -49,6 +49,8 @@ public:
   
   float getDesirability() { return this->desirability; }
   
+  void decrementIndex() { this->index--; }
+  
 private:
   sf::CircleShape circle; 
   bool isAnimating = true;
