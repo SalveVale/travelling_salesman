@@ -11,6 +11,7 @@ const int WINDOW_WIDTH = 1500;
 const int WINDOW_HEIGHT = 1000;
 
 const float desirabilityModifier = 0.15;
+const float desirabilityChance = 0.05;
 
 class Window {
 public:
@@ -157,7 +158,7 @@ private:
     }
     else if (this->state == build && newState == solvingAnt)
     {
-      this->window->setFramerateLimit(165);
+      this->window->setFramerateLimit(10);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
@@ -448,6 +449,8 @@ private:
   
   void resetUI()
   {
+    this->colBG = sf::Color(20, 20, 26, 255);
+    
     this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
     
     this->bestPathVal.setString("");
@@ -659,61 +662,58 @@ private:
   
   void solveAnt()
   {
-    /*
-    x get distances to all nodes and set desirability based on those distances
-    x randomly choose a node to go to, remove that node from potential nodes to visit and save it to list of visited nodes
-    x repeat until all nodes are visited
-    - save the path taken as a pharamone trail for the next iteration
-    */
-
-    Node firstNode = this->nodes[0];
+    srand(time(NULL));
+    int randomIndex = rand() % this->nodes.size();
+    Node firstNode = this->nodes[randomIndex];
     int firstx = firstNode.getx();
     int firsty = firstNode.gety();
     
     std::vector<Node> unvisitedNodes;
 
-    for (int i=1; i<this->nodes.size()-1; i++)
+    for (int i=0; i<this->nodes.size()-1; i++)
     {
-      Node nextNode = this->nodes[i];
-      int nextx = nextNode.getx();
-      int nexty = nextNode.gety();
+      if (i != randomIndex)
+      {
+        Node nextNode = this->nodes[i];
+        int nextx = nextNode.getx();
+        int nexty = nextNode.gety();
 
-      int xlen, ylen;
-      float hypotenuse;
+        int xlen, ylen;
+        float hypotenuse;
       
-      xlen = abs(firstx - nextx);
-      ylen = abs(firsty - nexty);
-      hypotenuse = this->findHypotenuse(xlen, ylen);
+        xlen = abs(firstx - nextx);
+        ylen = abs(firsty - nexty);
+        hypotenuse = this->findHypotenuse(xlen, ylen);
 
-      // if (currentx < nextx)
-      // {
-      //   xlen = nextx - currentx;
-      //   ylen = nexty - currenty;
-      // }
-      // else
-      // {
-      //   xlen = currentx - nextx;
-      //   ylen = currenty - nexty;
-      // }
-      // hypotenuse = this->findHypotenuse(xlen, ylen);
+        // if (currentx < nextx)
+        // {
+        //   xlen = nextx - currentx;
+        //   ylen = nexty - currenty;
+        // }
+        // else
+        // {
+        //   xlen = currentx - nextx;
+        //   ylen = currenty - nexty;
+        // }
+        // hypotenuse = this->findHypotenuse(xlen, ylen);
       
-      nextNode.setDesirability(hypotenuse, desirabilityModifier);
+        nextNode.setDesirability(hypotenuse, desirabilityModifier);
+      }
     }
-    std::cout << std::endl;
     
     unvisitedNodes = this->nodes;
     this->nodes.clear();
     // this->chooseNextNode(unvisitedNodes);
+    this->nodes.push_back(firstNode);
     
     do {
       srand(time(NULL));
       float bestDesirability = 0;
       Node *bestNode;
-      for (int i=0; i<unvisitedNodes.size(); i++)
+      for (int i=1; i<unvisitedNodes.size(); i++)
       {
         int randomModifier = rand() % 10;
-        float total = randomModifier * unvisitedNodes[i].getDesirability();
-        // std::cout << total << ", ";
+        float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
         if (total > bestDesirability)
         {
           bestDesirability = total;
@@ -728,7 +728,12 @@ private:
       }
 
       unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
-    } while (unvisitedNodes.size() > 1);
+    } while (unvisitedNodes.size() > 0);
+    
+    for (int i=0; i<this->nodes.size(); i++)
+    {
+      this->nodes[i].setIndex(i);
+    }
 
     this->generateLinks();
         
@@ -739,7 +744,6 @@ private:
       this->solveStep = 0;
       this->setState(solved);
     }
-    this->setState(solved);
   } 
   
   // void chooseNextNode(std::vector<Node> unvisitedNodes)

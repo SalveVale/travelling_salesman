@@ -51,6 +51,8 @@ public:
   
   void decrementIndex() { this->index--; }
   
+  void setIndex(int newIndex) { this->index = newIndex; }
+  
 private:
   sf::CircleShape circle; 
   bool isAnimating = true;
