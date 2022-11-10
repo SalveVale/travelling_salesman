@@ -65,5 +65,5 @@ private:
   
   int index;
   
-  float desirability = 0.8;
+  float desirability;
 };

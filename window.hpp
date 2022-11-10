@@ -89,6 +89,10 @@ private:
   sf::Vector2f mousePosWindow;
   
   //ui
+  sf::Color colButton = sf::Color(40, 40, 30, 255);
+  sf::Color colButtonHighlight = sf::Color(110, 110, 100, 255);
+  sf::Color colButtonActive = sf::Color(160, 160, 150, 255);
+  
   sf::RectangleShape UIShader;
   
   sf::Font font;
@@ -197,7 +201,7 @@ private:
     
     this->solveButton.setPosition(sf::Vector2f(9, 140));
     this->solveButton.setSize(sf::Vector2f(50, 20));
-    this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
+    this->solveButton.setFillColor(this->colButton);
     
     this->solveAntText.setFont(this->font);
     this->solveAntText.setCharacterSize(15);
@@ -206,7 +210,7 @@ private:
     
     this->solveAntButton.setPosition(sf::Vector2f(69, 140));
     this->solveAntButton.setSize(sf::Vector2f(50, 20));
-    this->solveAntButton.setFillColor(sf::Color(30, 30, 30, 255));
+    this->solveAntButton.setFillColor(this->colButton);
 
     this->resetText.setFont(this->font);
     this->resetText.setCharacterSize(15);
@@ -215,7 +219,7 @@ private:
     
     this->resetButton.setPosition(sf::Vector2f(9, 170));
     this->resetButton.setSize(sf::Vector2f(50, 20));
-    this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
+    this->resetButton.setFillColor(this->colButton);
     
     this->genSliderOutline.setPosition(sf::Vector2f(12, 10));
     this->genSliderOutline.setSize(sf::Vector2f(200, 15));
@@ -239,7 +243,7 @@ private:
     
     this->generateButton.setPosition(sf::Vector2f(9, 30));
     this->generateButton.setSize(sf::Vector2f(173, 20));
-    this->generateButton.setFillColor(sf::Color(30, 30, 30, 255));
+    this->generateButton.setFillColor(this->colButton);
     
     this->numNodesText.setFont(this->font);
     this->numNodesText.setCharacterSize(15);
@@ -381,16 +385,16 @@ private:
   {
     if (this->resetButton.getGlobalBounds().contains(this->mousePosWindow))
     {
-      this->resetButton.setFillColor(sf::Color(100, 100, 100, 255));
+      this->resetButton.setFillColor(this->colButtonHighlight);
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
-        this->resetButton.setFillColor(sf::Color(150, 150, 150, 255));
+        this->resetButton.setFillColor(this->colButtonActive);
         this->setState(build);
       }
     }
     else
     {
-      this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
+      this->resetButton.setFillColor(this->colButton);
     }
   }
   
@@ -398,30 +402,30 @@ private:
   {
     if (this->solveButton.getGlobalBounds().contains(this->mousePosWindow))
     {
-      this->solveButton.setFillColor(sf::Color(100, 100, 100, 255));
+      this->solveButton.setFillColor(this->colButtonHighlight);
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
-        this->solveButton.setFillColor(sf::Color(150, 150, 150, 255));
+        this->solveButton.setFillColor(this->colButtonActive);
         this->setState(solving);
       }
     }
     else
     {
-      this->solveButton.setFillColor(sf::Color(30, 30, 30, 255));
+      this->solveButton.setFillColor(this->colButton);
     }
     
     if (this->solveAntButton.getGlobalBounds().contains(this->mousePosWindow))
     {
-      this->solveAntButton.setFillColor(sf::Color(100, 100, 100, 255));
+      this->solveAntButton.setFillColor(this->colButtonHighlight);
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
-        this->solveAntButton.setFillColor(sf::Color(150, 150, 150, 255));
+        this->solveAntButton.setFillColor(this->colButtonActive);
         this->setState(solvingAnt);
       }
     }
     else
     {
-      this->solveAntButton.setFillColor(sf::Color(30, 30, 30, 255));
+      this->solveAntButton.setFillColor(this->colButton);
     }
     
     if (this->genSliderOutline.getGlobalBounds().contains(this->mousePosWindow) && sf::Mouse::isButtonPressed(sf::Mouse::Left))
@@ -433,17 +437,17 @@ private:
     
     if (this->generateButton.getGlobalBounds().contains(this->mousePosWindow))
     {
-      this->generateButton.setFillColor(sf::Color(100, 100, 100, 255));
+      this->generateButton.setFillColor(this->colButtonHighlight);
       if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
       {
-        this->generateButton.setFillColor(sf::Color(150, 150, 150, 255));
+        this->generateButton.setFillColor(this->colButtonActive);
         this->generateNodes();
         this->setState(buttonClicked);
       }
     }
     else
     {
-      this->generateButton.setFillColor(sf::Color(30, 30, 30, 255));
+      this->generateButton.setFillColor(this->colButton);
     }
   }
   
@@ -451,7 +455,7 @@ private:
   {
     this->colBG = sf::Color(20, 20, 26, 255);
     
-    this->resetButton.setFillColor(sf::Color(30, 30, 30, 255));
+    this->resetButton.setFillColor(this->colButton);
     
     this->bestPathVal.setString("");
     this->searchedSolutionsVal.setString("");
@@ -708,13 +712,13 @@ private:
     
     do {
       srand(time(NULL));
-      float bestDesirability = 0;
+      float bestDesirability = 100.f;
       Node *bestNode;
       for (int i=1; i<unvisitedNodes.size(); i++)
       {
         int randomModifier = rand() % 10;
         float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
-        if (total > bestDesirability)
+        if (total < bestDesirability)
         {
           bestDesirability = total;
           bestNode = &unvisitedNodes[i];
@@ -728,7 +732,7 @@ private:
       }
 
       unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
-    } while (unvisitedNodes.size() > 0);
+    } while (unvisitedNodes.size() > 1);
     
     for (int i=0; i<this->nodes.size(); i++)
     {
