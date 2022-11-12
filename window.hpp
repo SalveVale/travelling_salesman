@@ -89,9 +89,9 @@ private:
   sf::Vector2f mousePosWindow;
   
   //ui
-  sf::Color colButton = sf::Color(40, 40, 30, 255);
-  sf::Color colButtonHighlight = sf::Color(110, 110, 100, 255);
-  sf::Color colButtonActive = sf::Color(160, 160, 150, 255);
+  sf::Color colButton = sf::Color(40, 35, 30, 255);
+  sf::Color colButtonHighlight = sf::Color(110, 105, 100, 255);
+  sf::Color colButtonActive = sf::Color(160, 155, 150, 255);
   
   sf::RectangleShape UIShader;
   
@@ -162,7 +162,6 @@ private:
     }
     else if (this->state == build && newState == solvingAnt)
     {
-      this->window->setFramerateLimit(10);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
@@ -430,9 +429,12 @@ private:
     
     if (this->genSliderOutline.getGlobalBounds().contains(this->mousePosWindow) && sf::Mouse::isButtonPressed(sf::Mouse::Left))
     {
-      this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 11));
-      this->genSliderNum = (this->mousePosWindow.x - 12) / 2;
-      this->genSliderNumText.setString(std::to_string(this->genSliderNum));
+      if (this->mousePosWindow.x > 18 && this->mousePosWindow.x < 204)
+      {
+        this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 11));
+        this->genSliderNum = (this->mousePosWindow.x - 12) / 2;
+        this->genSliderNumText.setString(std::to_string(this->genSliderNum));
+      }
     }
     
     if (this->generateButton.getGlobalBounds().contains(this->mousePosWindow))
@@ -538,10 +540,56 @@ private:
     }
   }
   
+  void generateLinksDesirability(int startingIndex)
+  {
+    this->links.clear();
+    
+    Node startingNode = this->nodes[startingIndex];
+    int startingx = startingNode.getx();
+    int startingy = startingNode.gety();
+    for (int i=0; i<this->nodes.size(); i++)
+    {
+      if (i != startingIndex)
+      {
+        Node nextNode = this->nodes[i];
+        int nextx = nextNode.getx();
+        int nexty = nextNode.gety();
+        
+        sf::RectangleShape link;
+        link.setPosition(sf::Vector2f(startingx+1, startingy));
+        float desirability = pow(nextNode.getDesirability()*10, 3.5);
+        link.setFillColor(sf::Color(255, 255, 255, desirability));
+        
+        int xlen, ylen;
+        float hypotenuse;
+        if (startingx < nextx)
+        {
+          xlen = nextx - startingx;
+          ylen = nexty - startingy;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(hypotenuse, 2));
+        } else {
+          xlen = startingx - nextx;
+          ylen = startingy - nexty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(-hypotenuse, 2));
+        }
+        
+        float angle = this->findAngle(xlen, ylen);
+        
+        link.setRotation(angle);
+        
+        this->links.push_back(link);
+      }
+    }
+  }
+  
   void generateLinks()
   {
     this->links.clear();
     // std::vector<sf::RectangleShape> currentLinks;
+    
+    int transparencyColor = 15;
 
     for (int i=0; i<this->nodes.size(); i++)
     {
@@ -551,7 +599,8 @@ private:
       
       sf::RectangleShape link;
       link.setPosition(sf::Vector2f(currentx+1, currenty));
-      link.setFillColor(sf::Color(255, 255, 255, 80));
+      link.setFillColor(sf::Color(255, 255, 255, transparencyColor));
+      transparencyColor += 10;
 
       if (i == this->nodes.size()-1)
       {
@@ -672,82 +721,80 @@ private:
     int firstx = firstNode.getx();
     int firsty = firstNode.gety();
     
-    std::vector<Node> unvisitedNodes;
-
     for (int i=0; i<this->nodes.size()-1; i++)
     {
       if (i != randomIndex)
       {
-        Node nextNode = this->nodes[i];
-        int nextx = nextNode.getx();
-        int nexty = nextNode.gety();
+        Node *nextNode = &this->nodes[i];
+        int nextx = nextNode->getx();
+        int nexty = nextNode->gety();
 
         int xlen, ylen;
-        float hypotenuse;
+        float distance;
       
         xlen = abs(firstx - nextx);
         ylen = abs(firsty - nexty);
-        hypotenuse = this->findHypotenuse(xlen, ylen);
+        distance = this->findHypotenuse(xlen, ylen);
 
-        // if (currentx < nextx)
-        // {
-        //   xlen = nextx - currentx;
-        //   ylen = nexty - currenty;
-        // }
-        // else
-        // {
-        //   xlen = currentx - nextx;
-        //   ylen = currenty - nexty;
-        // }
-        // hypotenuse = this->findHypotenuse(xlen, ylen);
-      
-        nextNode.setDesirability(hypotenuse, desirabilityModifier);
+        nextNode->setDesirability(distance, desirabilityModifier);
       }
     }
     
-    unvisitedNodes = this->nodes;
-    this->nodes.clear();
-    // this->chooseNextNode(unvisitedNodes);
-    this->nodes.push_back(firstNode);
+    this->generateLinksDesirability(randomIndex);
     
-    do {
-      srand(time(NULL));
-      float bestDesirability = 100.f;
-      Node *bestNode;
-      for (int i=1; i<unvisitedNodes.size(); i++)
-      {
-        int randomModifier = rand() % 10;
-        float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
-        if (total < bestDesirability)
-        {
-          bestDesirability = total;
-          bestNode = &unvisitedNodes[i];
-        }
-      }
-      this->nodes.push_back(*bestNode);
+    this->setState(solved);
+    
+    // std::vector<std::vector<Node>> antPaths;
+    // for (int i=0; i<5; i++)
+    // {
+    //   std::vector<Node> unvisitedNodes = this->nodes;
+    //   std::vector<Node> currentPath;
+    //   currentPath.push_back(firstNode);
+    
+    //   do {
+    //     srand(time(NULL));
+    //     float bestDesirability = 100.f;
+    //     Node *bestNode;
+    //     for (int i=1; i<unvisitedNodes.size(); i++)
+    //     {
+    //       int randomModifier = rand() % 3;
+    //       float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
+    //       if (total < bestDesirability)
+    //       {
+    //         bestDesirability = total;
+    //         bestNode = &unvisitedNodes[i];
+    //       }
+    //     }
+    //     currentPath.push_back(*bestNode);
       
-      for (int i=bestNode->getIndex()+1; i<unvisitedNodes.size(); i++)
-      {
-        unvisitedNodes[i].decrementIndex();
-      }
+    //     for (int i=bestNode->getIndex()+1; i<unvisitedNodes.size(); i++)
+    //     {
+    //       unvisitedNodes[i].decrementIndex();
+    //     }
 
-      unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
-    } while (unvisitedNodes.size() > 1);
+    //     unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
+    //   } while (unvisitedNodes.size() > 1);
+      
+    //   antPaths.push_back(currentPath);
+    // }
     
-    for (int i=0; i<this->nodes.size(); i++)
-    {
-      this->nodes[i].setIndex(i);
-    }
-
-    this->generateLinks();
+    // for (int i=0; i<antPaths.size(); i++)
+    // {
+    //   for (int j=0; j<antPaths[i].size(); j++)
+    //   {
         
-    this->solveStep++;
-    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
-    if (this->solveStep >= this->totalSolutions)
-    {
-      this->solveStep = 0;
-      this->setState(solved);
-    }
+    //   }
+    // }
+
+    // this->generateLinks();
+        
+    // this->solveStep++;
+    // this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    // if (this->solveStep >= this->totalSolutions)
+    // {
+    //   this->solveStep = 0;
+    //   this->setState(solved);
+    // }
   } 
   
   // void chooseNextNode(std::vector<Node> unvisitedNodes)
@@ -771,7 +818,7 @@ private:
     
   //   if (unvisitedNodes.size() > 1) this->chooseNextNode(unvisitedNodes);
   // }
-   
+  
   void drawNodes()
   {
     for (int i=0; i<this->nodes.size(); i++)
