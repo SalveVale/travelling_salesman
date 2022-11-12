@@ -540,6 +540,11 @@ private:
     }
   }
   
+  void generateLinksPharamone()
+  {
+    this->links.clear();
+  }
+  
   void generateLinksDesirability(int startingIndex)
   {
     this->links.clear();
@@ -715,78 +720,113 @@ private:
   
   void solveAnt()
   {
-    srand(time(NULL));
-    int randomIndex = rand() % this->nodes.size();
-    Node firstNode = this->nodes[randomIndex];
-    int firstx = firstNode.getx();
-    int firsty = firstNode.gety();
-    
-    for (int i=0; i<this->nodes.size()-1; i++)
+    std::vector<std::vector<Node>> antPaths;
+    for (int i=0; i<5; i++)
     {
-      if (i != randomIndex)
+      srand(time(NULL));
+      int randomIndex = rand() % this->nodes.size();
+      Node firstNode = this->nodes[randomIndex];
+      int firstx = firstNode.getx();
+      int firsty = firstNode.gety();
+    
+      for (int i=0; i<this->nodes.size()-1; i++)
       {
-        Node *nextNode = &this->nodes[i];
-        int nextx = nextNode->getx();
-        int nexty = nextNode->gety();
+        if (i != randomIndex)
+        {
+          Node *nextNode = &this->nodes[i];
+          int nextx = nextNode->getx();
+          int nexty = nextNode->gety();
 
-        int xlen, ylen;
-        float distance;
+          int xlen, ylen;
+          float distance;
       
-        xlen = abs(firstx - nextx);
-        ylen = abs(firsty - nexty);
-        distance = this->findHypotenuse(xlen, ylen);
+          xlen = abs(firstx - nextx);
+          ylen = abs(firsty - nexty);
+          distance = this->findHypotenuse(xlen, ylen);
 
-        nextNode->setDesirability(distance, desirabilityModifier);
+          nextNode->setDesirability(distance, desirabilityModifier);
+        }
       }
+    
+      // this->generateLinksDesirability(randomIndex);
+    
+      // this->setState(solved);
+    
+      std::vector<Node> unvisitedNodes = this->nodes;
+      std::vector<Node> currentPath;
+      currentPath.push_back(firstNode);
+    
+      do {
+        srand(time(NULL));
+        float bestDesirability = 100.f;
+        Node *bestNode;
+        for (int i=1; i<unvisitedNodes.size(); i++)
+        {
+          int randomModifier = rand() % 3;
+          float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
+          if (total < bestDesirability)
+          {
+            bestDesirability = total;
+            bestNode = &unvisitedNodes[i];
+          }
+        }
+        currentPath.push_back(*bestNode);
+      
+        for (int i=bestNode->getIndex()+1; i<unvisitedNodes.size(); i++)
+        {
+          unvisitedNodes[i].decrementIndex();
+        }
+
+        unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
+      } while (unvisitedNodes.size() > 1);
+      
+      antPaths.push_back(currentPath);
     }
     
-    this->generateLinksDesirability(randomIndex);
+    std::vector<float> scoredPathIndeces;
+    for (int i=0; i<antPaths.size(); i++)
+    {
+      float totalDistance;
+      for (int j=0; j<antPaths[i].size(); j++)
+      {
+        Node currentNode = antPaths[i][j];
+        int currentx = currentNode.getx();
+        int currenty = currentNode.gety();
+        
+        float distance;
+        if (j == antPaths[i].size()-1)
+        {
+          Node firstNode = antPaths[i][0];
+          int firstx = firstNode.getx();
+          int firsty = firstNode.gety();
+          
+          int xlen = abs(currentx - firstx);
+          int ylen = abs(currenty - firsty);
+          distance = this->findHypotenuse(xlen, ylen);
+        } else {
+          Node nextNode = antPaths[i][j+1];
+          int nextx = nextNode.getx();
+          int nexty = nextNode.gety();
+          
+          int xlen = abs(currentx - nextx);
+          int ylen = abs(currenty - nexty);
+          distance = this->findHypotenuse(xlen, ylen);
+        }
+        
+        totalDistance += distance;
+      }
+      scoredPathIndeces.push_back(totalDistance);
+    }
+    
+    std::sort(scoredPathIndeces.begin(), scoredPathIndeces.end());
+    for (int i=0; i<scoredPathIndeces.size(); i++)
+    {
+      std::cout << i << ": " << scoredPathIndeces[i] << std::endl;
+    }
     
     this->setState(solved);
-    
-    // std::vector<std::vector<Node>> antPaths;
-    // for (int i=0; i<5; i++)
-    // {
-    //   std::vector<Node> unvisitedNodes = this->nodes;
-    //   std::vector<Node> currentPath;
-    //   currentPath.push_back(firstNode);
-    
-    //   do {
-    //     srand(time(NULL));
-    //     float bestDesirability = 100.f;
-    //     Node *bestNode;
-    //     for (int i=1; i<unvisitedNodes.size(); i++)
-    //     {
-    //       int randomModifier = rand() % 3;
-    //       float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
-    //       if (total < bestDesirability)
-    //       {
-    //         bestDesirability = total;
-    //         bestNode = &unvisitedNodes[i];
-    //       }
-    //     }
-    //     currentPath.push_back(*bestNode);
-      
-    //     for (int i=bestNode->getIndex()+1; i<unvisitedNodes.size(); i++)
-    //     {
-    //       unvisitedNodes[i].decrementIndex();
-    //     }
 
-    //     unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
-    //   } while (unvisitedNodes.size() > 1);
-      
-    //   antPaths.push_back(currentPath);
-    // }
-    
-    // for (int i=0; i<antPaths.size(); i++)
-    // {
-    //   for (int j=0; j<antPaths[i].size(); j++)
-    //   {
-        
-    //   }
-    // }
-
-    // this->generateLinks();
+    // this->generateLinksPharamone();
         
     // this->solveStep++;
     // this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
