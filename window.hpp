@@ -126,6 +126,7 @@ private:
   std::vector<Node> nodes;
   std::vector<sf::RectangleShape> links;
   std::vector<Node> visitedNodesInOrder;
+  std::vector<std::vector<float>> pharamones;
   
   long totalSolutions;
   int solveStep = 0;
@@ -162,6 +163,8 @@ private:
     }
     else if (this->state == build && newState == solvingAnt)
     {
+      this->initPharamones();
+      this->window->setFramerateLimit(20);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
@@ -226,7 +229,7 @@ private:
     this->genSliderOutline.setOutlineColor(sf::Color::White);
     this->genSliderOutline.setOutlineThickness(1);
     
-    this->genSliderBox.setPosition(sf::Vector2f(12, 11));
+    this->genSliderBox.setPosition(sf::Vector2f(30, 12));
     this->genSliderBox.setSize(sf::Vector2f(10, 10));
     this->genSliderBox.setFillColor(sf::Color::White);
     
@@ -431,7 +434,7 @@ private:
     {
       if (this->mousePosWindow.x > 18 && this->mousePosWindow.x < 204)
       {
-        this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 11));
+        this->genSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 12));
         this->genSliderNum = (this->mousePosWindow.x - 12) / 2;
         this->genSliderNumText.setString(std::to_string(this->genSliderNum));
       }
@@ -543,6 +546,78 @@ private:
   void generateLinksPharamone()
   {
     this->links.clear();
+    
+    for (int i=0; i<this->nodes.size(); i++)
+    {
+      for (int j=0; j<this->nodes.size(); j++)
+      {
+        Node currentNode = this->nodes[i];
+        int currentx = currentNode.getx();
+        int currenty = currentNode.gety();
+        
+        sf::RectangleShape link;
+        link.setPosition(sf::Vector2f(currentx+1, currenty));
+        link.setFillColor(sf::Color(255, 255, 255, 40*this->pharamones[i][j]));
+        
+        if (j == this->nodes.size()-1)
+        {
+          Node firstNode = this->nodes[0];
+          int firstx = firstNode.getx();
+          int firsty = firstNode.gety();
+        
+          float xlen, ylen, hypotenuse;
+        
+          if (currentx < firstx)
+          {
+            xlen = firstx - currentx;
+            ylen = firsty - currenty;
+            hypotenuse = this->findHypotenuse(xlen, ylen);
+            link.setSize(sf::Vector2f(hypotenuse, 2));
+          }
+          else
+          {
+            xlen = currentx - firstx;
+            ylen = currenty - firsty;
+            hypotenuse = this->findHypotenuse(xlen, ylen);
+            link.setSize(sf::Vector2f(-hypotenuse, 2));
+          }
+
+          float angle = this->findAngle(xlen, ylen);
+        
+          link.setRotation(angle);
+
+          this->links.push_back(link);
+          break;
+        }
+      
+        Node nextNode = this->nodes[j+1];
+        int nextx = nextNode.getx();
+        int nexty = nextNode.gety();
+      
+        float xlen, ylen, hypotenuse;
+      
+        if (currentx < nextx)
+        {
+          xlen = nextx - currentx;
+          ylen = nexty - currenty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(hypotenuse, 2));
+        }
+        else
+        {
+          xlen = currentx - nextx;
+          ylen = currenty - nexty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(-hypotenuse, 2));
+        }
+
+        float angle = this->findAngle(xlen, ylen);
+            
+        link.setRotation(angle);
+      
+        this->links.push_back(link);
+      }
+    }
   }
   
   void generateLinksDesirability(int startingIndex)
@@ -721,19 +796,23 @@ private:
   void solveAnt()
   {
     std::vector<std::vector<Node>> antPaths;
+    // 5 ants determine the desirability of nodes based on the distance from their current node
     for (int i=0; i<5; i++)
     {
-      srand(time(NULL));
-      int randomIndex = rand() % this->nodes.size();
+      std::random_device rd;
+      std::default_random_engine eng(rd());
+      std::uniform_int_distribution<int> distr(0, this->nodes.size());
+      int randomIndex = distr(eng);
+
       Node firstNode = this->nodes[randomIndex];
       int firstx = firstNode.getx();
       int firsty = firstNode.gety();
     
-      for (int i=0; i<this->nodes.size()-1; i++)
+      for (int j=0; j<this->nodes.size()-1; j++)
       {
-        if (i != randomIndex)
+        if (j != randomIndex)
         {
-          Node *nextNode = &this->nodes[i];
+          Node *nextNode = &this->nodes[j];
           int nextx = nextNode->getx();
           int nexty = nextNode->gety();
 
@@ -744,7 +823,7 @@ private:
           ylen = abs(firsty - nexty);
           distance = this->findHypotenuse(xlen, ylen);
 
-          nextNode->setDesirability(distance, desirabilityModifier);
+          nextNode->setDesirability(distance, desirabilityModifier, this->getPharamones(i, j));
         }
       }
     
@@ -756,25 +835,29 @@ private:
       std::vector<Node> currentPath;
       currentPath.push_back(firstNode);
     
+      // the ants then randomely select a node to travel to based on its desirability until all nodes are explored
       do {
-        srand(time(NULL));
         float bestDesirability = 100.f;
         Node *bestNode;
-        for (int i=1; i<unvisitedNodes.size(); i++)
+        for (int k=1; k<unvisitedNodes.size(); k++)
         {
-          int randomModifier = rand() % 3;
-          float total = desirabilityChance * randomModifier * unvisitedNodes[i].getDesirability();
+          std::random_device rd2;
+          std::default_random_engine eng2(rd2());
+          std::uniform_int_distribution<int> distr2(0, 3);
+          int randomModifier = distr2(eng2);
+
+          float total = desirabilityChance * randomModifier * unvisitedNodes[k].getDesirability();
           if (total < bestDesirability)
           {
             bestDesirability = total;
-            bestNode = &unvisitedNodes[i];
+            bestNode = &unvisitedNodes[k];
           }
         }
         currentPath.push_back(*bestNode);
       
-        for (int i=bestNode->getIndex()+1; i<unvisitedNodes.size(); i++)
+        for (int l=bestNode->getIndex()+1; l<unvisitedNodes.size(); l++)
         {
-          unvisitedNodes[i].decrementIndex();
+          unvisitedNodes[l].decrementIndex();
         }
 
         unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
@@ -783,7 +866,8 @@ private:
       antPaths.push_back(currentPath);
     }
     
-    std::vector<float> scoredPathIndeces;
+    // the paths the ants took are then scored based on the total distance the ants traveled
+    std::vector<float> scoredPaths;
     for (int i=0; i<antPaths.size(); i++)
     {
       float totalDistance;
@@ -815,27 +899,72 @@ private:
         
         totalDistance += distance;
       }
-      scoredPathIndeces.push_back(totalDistance);
+      scoredPaths.push_back(totalDistance);
     }
-    
-    std::sort(scoredPathIndeces.begin(), scoredPathIndeces.end());
-    for (int i=0; i<scoredPathIndeces.size(); i++)
-    {
-      std::cout << i << ": " << scoredPathIndeces[i] << std::endl;
-    }
-    
-    this->setState(solved);
 
-    // this->generateLinksPharamone();
-        
-    // this->solveStep++;
-    // this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
-    // if (this->solveStep >= this->totalSolutions)
-    // {
-    //   this->solveStep = 0;
-    //   this->setState(solved);
-    // }
+    // the vector of paths is sorted from shortest path taken to longest
+    std::sort(scoredPaths.begin(), scoredPaths.end());
+    float strength = 20.f;
+    for (int i=0; i<antPaths.size(); i++)
+    {
+      for (int j=0; j<antPaths[i].size(); j++)
+      {
+        if (j < antPaths[i].size()-1)
+        {
+          this->pharamones[antPaths[i][j].getIndex()][antPaths[i][j+1].getIndex()] = strength;
+        } else {
+          this->pharamones[antPaths[i][j].getIndex()][antPaths[i][0].getIndex()] = strength;
+        }
+      }
+      strength /= 2;
+    }
+    
+    this->decrementPharamones();
+    
+    this->generateLinksPharamone();
+
+    this->solveStep++;
+    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    if (this->solveStep >= this->totalSolutions)
+    {
+      this->solveStep = 0;
+      this->setState(solved);
+    }
   } 
+  
+  void initPharamones()
+  {
+    for (int i=0; i<this->numNodes; i++)
+    {
+      std::vector<float> currentPharamones;
+      for (int j=0; j<this->numNodes; j++)
+      {
+        currentPharamones.push_back(0.1);
+      }
+      this->pharamones.push_back(currentPharamones);
+    }
+  }
+  
+  void decrementPharamones()
+  {
+    for (int i=0; i<this->numNodes; i++)
+    {
+      for (int j=0; j<this->numNodes; j++)
+      {
+        this->pharamones[i][j] /= 2;
+      }
+    }
+  }
+  
+  float getPharamones(int i, int j)
+  {
+    if (i < j)
+    {
+      return this->pharamones[i][j];
+    } else {
+      return this->pharamones[j][i];
+    }
+  }
   
   // void chooseNextNode(std::vector<Node> unvisitedNodes)
   // {

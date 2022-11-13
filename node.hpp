@@ -42,9 +42,9 @@ public:
   
   int getIndex() { return this->index; }
   
-  void setDesirability(float distance, float desirabilityModifier)
+  void setDesirability(float distance, float desirabilityModifier, float pharamoneStrength)
   {
-    this->desirability = pow(1/distance, desirabilityModifier);
+    this->desirability = pow(1/distance, desirabilityModifier) * pharamoneStrength;
   }
   
   float getDesirability() { return this->desirability; }
