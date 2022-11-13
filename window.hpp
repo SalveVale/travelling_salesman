@@ -10,8 +10,8 @@
 const int WINDOW_WIDTH = 1500;
 const int WINDOW_HEIGHT = 1000;
 
-const float desirabilityModifier = 0.15;
-const float desirabilityChance = 0.05;
+const float desirabilityModifier = 0.85;
+const float desirabilityChance = 0.01;
 
 class Window {
 public:
@@ -49,6 +49,7 @@ public:
         break;
       case solvingAnt:
         this->pollEventsSolving();
+        this->printPharamones();
         this->solveAnt();
         break;
       case solved:
@@ -164,7 +165,7 @@ private:
     else if (this->state == build && newState == solvingAnt)
     {
       this->initPharamones();
-      this->window->setFramerateLimit(20);
+      this->window->setFramerateLimit(1);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
@@ -911,9 +912,9 @@ private:
       {
         if (j < antPaths[i].size()-1)
         {
-          this->pharamones[antPaths[i][j].getIndex()][antPaths[i][j+1].getIndex()] = strength;
+          this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][j+1].getIndex(), strength);
         } else {
-          this->pharamones[antPaths[i][j].getIndex()][antPaths[i][0].getIndex()] = strength;
+          this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][0].getIndex(), strength);
         }
       }
       strength /= 2;
@@ -939,7 +940,7 @@ private:
       std::vector<float> currentPharamones;
       for (int j=0; j<this->numNodes; j++)
       {
-        currentPharamones.push_back(0.1);
+        currentPharamones.push_back(0.0);
       }
       this->pharamones.push_back(currentPharamones);
     }
@@ -963,6 +964,16 @@ private:
       return this->pharamones[i][j];
     } else {
       return this->pharamones[j][i];
+    }
+  }
+  
+  void setPharamones(int i, int j, float value)
+  {
+    if (i < j)
+    {
+      this->pharamones[i][j] = value;
+    } else {
+      this->pharamones[j][i] = value;
     }
   }
   
@@ -1026,5 +1037,18 @@ private:
     this->window->draw(this->bestPathVal);
     this->window->draw(this->resetButton);
     this->window->draw(this->resetText);
+  }
+  
+  void printPharamones()
+  {
+    for (int i=0; i<this->numNodes; i++)
+    {
+      for (int j=0; j<this->numNodes; j++)
+      {
+        std::cout << this->pharamones[i][j] << ", ";
+      }
+      std::cout << std::endl;
+    }  
+    std::cout << std::endl;
   }
 };
