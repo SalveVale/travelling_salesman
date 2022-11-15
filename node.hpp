@@ -44,7 +44,14 @@ public:
   
   void setDesirability(float distance, float desirabilityModifier, float pharamoneStrength)
   {
-    this->desirability = pow((1/distance * 1000), desirabilityModifier) * pharamoneStrength;
+    this->distance = (1/distance) * 1000;
+    this->desirability = pow((this->distance), desirabilityModifier) * pharamoneStrength;
+  }
+  
+  float updateDesirability(float power)
+  {
+    this->desirability = pow(this->distance, power);
+    return this->desirability;
   }
   
   float getDesirability() { return this->desirability; }
@@ -64,6 +71,8 @@ private:
   int y;
   
   int index;
+  
+  float distance;
   
   float desirability;
 };

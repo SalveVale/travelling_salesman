@@ -10,7 +10,6 @@
 const int WINDOW_WIDTH = 1500;
 const int WINDOW_HEIGHT = 1000;
 
-const float desirabilityModifier = 4.9;
 const float desirabilityChance = 0.01;
 
 class Window {
@@ -42,6 +41,13 @@ public:
       case buttonClicked:
         this->pollEventsButtonClicked();
         break;
+      case tweakAnt:
+        this->pollEventsBuild();
+        this->updateMouse();
+        this->updateUITweak();
+        this->pickNodesProximity();
+        // this->updateLinksTweak();
+        break;
       case solving:
         this->pollEventsSolving();
         this->solve();
@@ -66,7 +72,12 @@ public:
     
     this->drawLinks();
     this->drawNodes();
-    this->drawUI();
+    if (this->state == tweakAnt)
+    {
+      this->drawUITweak();
+    } else {
+      this->drawUI();
+    }
     
     this->window->display();
   }
@@ -75,6 +86,7 @@ private:
   enum states{
     build,
     buttonClicked,
+    tweakAnt,
     solving,
     solvingAnt,
     solved
@@ -123,7 +135,17 @@ private:
   
   int numNodes = 0;
   
+  //tweakUI
+  sf::RectangleShape tweakButton;
+  sf::Text tweakButtonText;
+  
+  sf::RectangleShape powerSliderOutline;
+  sf::RectangleShape powerSliderBox;
+  sf::Text powerSliderDescriptionText;
+  
   //logic
+  float desirabilityModifier = 4.9;
+  
   std::vector<Node> nodes;
   std::vector<sf::RectangleShape> links;
   std::vector<Node> visitedNodesInOrder;
@@ -132,10 +154,13 @@ private:
   long totalSolutions;
   int solveStep = 0;
   int shuffleIndex;
+  int randomTweakIndex;
   
   int genSliderNum = 10;
   
   float prevBestDistance = 9999999999.f;
+  
+  bool isNodes = false;
   
   //functions
   //state engine
@@ -148,6 +173,24 @@ private:
     else if (this->state == buttonClicked && newState == build)
     {
       this->state = build;
+    }
+    else if (this->state == build && newState == tweakAnt)
+    {
+      this->colBG = sf::Color(26, 20, 20, 255);
+      this->UIShader.setSize(sf::Vector2f(100, 200));
+      
+      std::random_device rd;
+      std::default_random_engine eng(rd());
+      std::uniform_int_distribution<int> distr(0, this->nodes.size());
+      this->randomTweakIndex = distr(eng);
+      
+      this->state = tweakAnt;
+    }
+    else if (this->state == tweakAnt && newState == solvingAnt)
+    {
+      this->colBG = sf::Color(20, 20, 26, 255);
+      this->UIShader.setSize(sf::Vector2f(200, 100));
+      this->state = solvingAnt;
     }
     else if (this->state == build && newState == solving)
     {
@@ -279,6 +322,31 @@ private:
     this->bestPathVal.setFont(this->font);
     this->bestPathVal.setCharacterSize(15);
     this->bestPathVal.setPosition(sf::Vector2f(200, 110));
+    
+    //tweakUI
+    this->tweakButton.setPosition(sf::Vector2f(150, 140));
+    this->tweakButton.setSize(sf::Vector2f(80, 20));
+    this->tweakButton.setFillColor(colButton);
+    
+    this->tweakButtonText.setFont(this->font);
+    this->tweakButtonText.setCharacterSize(15);
+    this->tweakButtonText.setPosition(sf::Vector2f(200, 140));
+    this->tweakButtonText.setString("Tweak");
+    
+    this->powerSliderOutline.setPosition(sf::Vector2f(12, 20));
+    this->powerSliderOutline.setSize(sf::Vector2f(200, 15));
+    this->powerSliderOutline.setFillColor(sf::Color(25, 25, 25, 255));
+    this->powerSliderOutline.setOutlineColor(sf::Color::White);
+    this->powerSliderOutline.setOutlineThickness(1);
+    
+    this->powerSliderBox.setPosition(sf::Vector2f(55, 22));
+    this->powerSliderBox.setSize(sf::Vector2f(10, 10));
+    this->powerSliderBox.setFillColor(sf::Color::White);
+    
+    this->powerSliderDescriptionText.setFont(this->font);
+    this->powerSliderDescriptionText.setCharacterSize(15);
+    this->powerSliderDescriptionText.setPosition(sf::Vector2f(10, 40));
+    this->powerSliderDescriptionText.setString("Proximity bias");
   }
   
   void initWindow()
@@ -381,6 +449,7 @@ private:
     this->nodes.push_back(*newNode);
     
     this->numNodes++;
+    if (this->numNodes > 3) this->isNodes = true;
     this->updatePossibleSolutionsText();
   }
   
@@ -455,6 +524,32 @@ private:
     {
       this->generateButton.setFillColor(this->colButton);
     }
+    
+    if (this->tweakButton.getGlobalBounds().contains(this->mousePosWindow))
+    {
+      this->tweakButton.setFillColor(this->colButtonHighlight);
+      if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+      {
+        this->tweakButton.setFillColor(this->colButtonActive);
+        this->setState(tweakAnt);
+      }
+    }
+    else
+    {
+      this->tweakButton.setFillColor(this->colButton);
+    }
+  }
+  
+  void updateUITweak()
+  {
+    if (this->powerSliderOutline.getGlobalBounds().contains(this->mousePosWindow) && sf::Mouse::isButtonPressed(sf::Mouse::Left))
+    {
+      if (this->mousePosWindow.x > 18 && this->mousePosWindow.x < 204)
+      {
+        this->powerSliderBox.setPosition(sf::Vector2f(this->mousePosWindow.x - 5, 20));
+        this->desirabilityModifier = (this->mousePosWindow.x - 18) / 10;
+      }
+    }
   }
   
   void resetUI()
@@ -478,6 +573,7 @@ private:
       this->nodes.push_back(*newNode);
       this->numNodes++;
     }
+    if (this->numNodes > 3) this->isNodes = true;
     this->updatePossibleSolutionsText();
     this->setState(build);
   }
@@ -666,6 +762,15 @@ private:
     }
   }
   
+  // void updateLinksTweak()
+  // {
+  //   for (int i=0; i<this->links.size(); i++)
+  //   {
+  //     float desirability = this->nodes[i].updateDesirability(this->desirabilityModifier);
+  //     this->links[i].setFillColor(sf::Color(255, 255, 255, desirability));
+  //   }
+  // }
+  
   void generateLinks()
   {
     this->links.clear();
@@ -793,6 +898,33 @@ private:
     // }
     // std::cout << std::endl;
     // this->nodes = tempVec;
+  }
+  
+  void pickNodesProximity()
+  {
+    Node firstNode = this->nodes[this->randomTweakIndex];
+    int firstx = firstNode.getx();
+    int firsty = firstNode.gety();
+  
+    for (int j=0; j<this->nodes.size()-1; j++)
+    {
+      if (j != this->randomTweakIndex)
+      {
+        Node *nextNode = &this->nodes[j];
+        int nextx = nextNode->getx();
+        int nexty = nextNode->gety();
+
+        int xlen, ylen;
+        float distance;
+    
+        xlen = abs(firstx - nextx);
+        ylen = abs(firsty - nexty);
+        distance = this->findHypotenuse(xlen, ylen);
+
+        nextNode->setDesirability(distance, desirabilityModifier, 1);
+      }
+    }
+    this->generateLinksDesirability(this->randomTweakIndex);
   }
   
   void solveAnt()
@@ -1048,6 +1180,20 @@ private:
     this->window->draw(this->bestPathVal);
     this->window->draw(this->resetButton);
     this->window->draw(this->resetText);
+    
+    if (this->isNodes)
+    {
+      this->window->draw(this->tweakButton);
+      this->window->draw(this->tweakButtonText);
+    }
+  }
+  
+  void drawUITweak()
+  {
+    this->window->draw(this->UIShader);
+    this->window->draw(this->powerSliderOutline);
+    this->window->draw(this->powerSliderBox);
+    this->window->draw(this->powerSliderDescriptionText);
   }
   
   void printPharamones()
