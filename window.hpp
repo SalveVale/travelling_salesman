@@ -10,7 +10,7 @@
 const int WINDOW_WIDTH = 1500;
 const int WINDOW_HEIGHT = 1000;
 
-const float desirabilityModifier = 0.85;
+const float desirabilityModifier = 4.9;
 const float desirabilityChance = 0.01;
 
 class Window {
@@ -638,7 +638,8 @@ private:
         
         sf::RectangleShape link;
         link.setPosition(sf::Vector2f(startingx+1, startingy));
-        float desirability = pow(nextNode.getDesirability()*10, 3.5);
+        // float desirability = pow(nextNode.getDesirability()*10, 3.5);
+        float desirability = nextNode.getDesirability();
         link.setFillColor(sf::Color(255, 255, 255, desirability));
         
         int xlen, ylen;
@@ -824,7 +825,9 @@ private:
           ylen = abs(firsty - nexty);
           distance = this->findHypotenuse(xlen, ylen);
 
-          nextNode->setDesirability(distance, desirabilityModifier, this->getPharamones(i, j));
+          // nextNode->setDesirability(distance, desirabilityModifier, this->getPharamones(firstNode.getIndex(), nextNode->getIndex()));
+          nextNode->setDesirability(distance, desirabilityModifier, 1);
+          // nextNode->setDesirability(distance, desirabilityModifier, this->pharamones[firstNode.getIndex()][nextNode->getIndex()]);
         }
       }
     
@@ -847,7 +850,8 @@ private:
           std::uniform_int_distribution<int> distr2(0, 3);
           int randomModifier = distr2(eng2);
 
-          float total = desirabilityChance * randomModifier * unvisitedNodes[k].getDesirability();
+          // float total = desirabilityChance * randomModifier * unvisitedNodes[k].getDesirability();
+          float total = unvisitedNodes[k].getDesirability();
           if (total < bestDesirability)
           {
             bestDesirability = total;
@@ -905,19 +909,21 @@ private:
 
     // the vector of paths is sorted from shortest path taken to longest
     std::sort(scoredPaths.begin(), scoredPaths.end());
-    float strength = 20.f;
+    int strength = 25;
     for (int i=0; i<antPaths.size(); i++)
     {
       for (int j=0; j<antPaths[i].size(); j++)
       {
         if (j < antPaths[i].size()-1)
         {
+          // this->pharamones[antPaths[i][j].getIndex()][antPaths[i][j+1].getIndex()] = strength;
           this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][j+1].getIndex(), strength);
         } else {
+          // this->pharamones[antPaths[i][j].getIndex()][antPaths[i][0].getIndex()] = strength;
           this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][0].getIndex(), strength);
         }
       }
-      strength /= 2;
+      strength -= 5;
     }
     
     this->decrementPharamones();
@@ -952,7 +958,12 @@ private:
     {
       for (int j=0; j<this->numNodes; j++)
       {
-        this->pharamones[i][j] /= 2;
+        if (this->pharamones[i][j] < 0.015)
+        {
+          this->pharamones[i][j] = 0;
+        } else {
+          this->pharamones[i][j] /= 2;
+        }
       }
     }
   }
