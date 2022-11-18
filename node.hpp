@@ -16,6 +16,7 @@ public:
     this->y = y;
     
     this->index = index;
+    this->otherIndex = index;
   }
   // ~Node() {}
   
@@ -60,6 +61,8 @@ public:
   
   void setIndex(int newIndex) { this->index = newIndex; }
   
+  int getOtherIndex() { return this->otherIndex; }
+  
 private:
   sf::CircleShape circle; 
   bool isAnimating = true;
@@ -71,6 +74,7 @@ private:
   int y;
   
   int index;
+  int otherIndex;
   
   float distance;
   

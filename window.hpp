@@ -59,7 +59,7 @@ public:
         // this->printPharamones();
         this->solveAnt();
         this->decrementPharamones();
-        // this->generateLinksPharamone();
+        this->generateLinksPharamone();
         this->increaseSolveStep();
         break;
       case solved:
@@ -948,7 +948,7 @@ private:
       int firstx = firstNode.getx();
       int firsty = firstNode.gety();
     
-      for (int j=0; j<this->nodes.size()-1; j++)
+      for (int j=0; j<this->nodes.size(); j++)
       {
         if (j != randomIndex)
         {
@@ -965,7 +965,7 @@ private:
 
           // nextNode->setDesirability(distance, desirabilityModifier, this->getPharamones(firstNode.getIndex(), nextNode->getIndex()));
           // nextNode->setDesirability(distance, desirabilityModifier, 1);
-          nextNode->setDesirability(distance, desirabilityModifier, this->pharamones[firstNode.getIndex()][nextNode->getIndex()]);
+          nextNode->setDesirability(distance, desirabilityModifier, this->pharamones[firstNode.getOtherIndex()][nextNode->getOtherIndex()]);
           // std::cout << this->nodes[j].getDesirability() << ", ";
         }
       }
@@ -986,7 +986,7 @@ private:
       
       std::vector<Node> currentPath;
       currentPath.push_back(firstNode);
-    
+      
       // the ants then randomely select a node to travel to based on its desirability until all nodes are explored
       do {
         float bestDesirability = 0.f;
@@ -995,7 +995,7 @@ private:
         {
           std::random_device rd2;
           std::default_random_engine eng2(rd2());
-          std::uniform_int_distribution<int> distr2(1, 3);
+          std::uniform_int_distribution<int> distr2(1, 2);
           int randomModifier = distr2(eng2);
 
           // float total = desirabilityChance * randomModifier * unvisitedNodes[k].getDesirability();
@@ -1015,7 +1015,12 @@ private:
         }
 
         unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
-      } while (unvisitedNodes.size() > 1);
+      } while (unvisitedNodes.size() > 0);
+      
+      // for (int j=0; j<currentPath.size(); j++)
+      // {
+      //   currentPath[j].setIndex(j);
+      // }
       
       antPaths.push_back(currentPath);
     }
@@ -1059,7 +1064,7 @@ private:
     // the vector of paths is sorted from shortest path taken to longest
     std::sort(scoredPaths.begin(), scoredPaths.end());
     
-    this->generateLinksBestAntTest(antPaths[0]);
+    // this->generateLinksBestAntTest(antPaths[0]);
     
     float strength = 25.f;
     for (int i=0; i<antPaths.size(); i++)
