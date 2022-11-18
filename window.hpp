@@ -52,11 +52,15 @@ public:
         this->pollEventsSolving();
         this->solve();
         this->shuffleNodes();
+        this->increaseSolveStep();
         break;
       case solvingAnt:
         this->pollEventsSolving();
         // this->printPharamones();
         this->solveAnt();
+        this->decrementPharamones();
+        // this->generateLinksPharamone();
+        this->increaseSolveStep();
         break;
       case solved:
         this->pollEventsBasic();
@@ -189,6 +193,7 @@ private:
     else if (this->state == tweakAnt && newState == solvingAnt)
     {
       this->window->setFramerateLimit(30);
+      this->initPharamones();
       this->colBG = sf::Color(20, 20, 26, 255);
       this->UIShader.setSize(sf::Vector2f(200, 100));
       this->state = solvingAnt;
@@ -209,7 +214,7 @@ private:
     else if (this->state == build && newState == solvingAnt)
     {
       this->initPharamones();
-      this->window->setFramerateLimit(30);
+      this->window->setFramerateLimit(3);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
@@ -632,13 +637,13 @@ private:
       this->generateLinks();
     }
     
-    this->solveStep++;
-    this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
-    if (this->solveStep >= this->totalSolutions)
-    {
-      this->solveStep = 0;
-      this->setState(solved);
-    }
+    // this->solveStep++;
+    // this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    // if (this->solveStep >= this->totalSolutions)
+    // {
+    //   this->solveStep = 0;
+    //   this->setState(solved);
+    // }
   }
   
   void generateLinksPharamone()
@@ -777,7 +782,7 @@ private:
     this->links.clear();
     // std::vector<sf::RectangleShape> currentLinks;
     
-    int transparencyColor = 15;
+    // int transparencyColor = 15;
 
     for (int i=0; i<this->nodes.size(); i++)
     {
@@ -787,8 +792,8 @@ private:
       
       sf::RectangleShape link;
       link.setPosition(sf::Vector2f(currentx+1, currenty));
-      link.setFillColor(sf::Color(255, 255, 255, transparencyColor));
-      transparencyColor += 10;
+      link.setFillColor(sf::Color(255, 255, 255, 80));
+      // transparencyColor += 10;
 
       if (i == this->nodes.size()-1)
       {
@@ -936,7 +941,7 @@ private:
     {
       std::random_device rd;
       std::default_random_engine eng(rd());
-      std::uniform_int_distribution<int> distr(0, this->nodes.size());
+      std::uniform_int_distribution<int> distr(0, this->nodes.size()-1);
       int randomIndex = distr(eng);
 
       Node firstNode = this->nodes[randomIndex];
@@ -973,6 +978,12 @@ private:
     
       std::vector<Node> unvisitedNodes = this->nodes;
       unvisitedNodes.erase(unvisitedNodes.begin());
+      
+      for (int j=0; j<unvisitedNodes.size()-1; j++)
+      {
+        unvisitedNodes[j].decrementIndex();
+      }
+      
       std::vector<Node> currentPath;
       currentPath.push_back(firstNode);
     
@@ -998,10 +1009,10 @@ private:
         }
         currentPath.push_back(*bestNode);
       
-        // for (int l=bestNode->getIndex()+1; l<unvisitedNodes.size(); l++)
-        // {
-        //   unvisitedNodes[l].decrementIndex();
-        // }
+        for (int l=bestNode->getIndex()+1; l<unvisitedNodes.size(); l++)
+        {
+          unvisitedNodes[l].decrementIndex();
+        }
 
         unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
       } while (unvisitedNodes.size() > 1);
@@ -1047,7 +1058,10 @@ private:
 
     // the vector of paths is sorted from shortest path taken to longest
     std::sort(scoredPaths.begin(), scoredPaths.end());
-    int strength = 25;
+    
+    this->generateLinksBestAntTest(antPaths[0]);
+    
+    float strength = 25.f;
     for (int i=0; i<antPaths.size(); i++)
     {
       for (int j=0; j<antPaths[i].size(); j++)
@@ -1061,13 +1075,98 @@ private:
           this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][0].getIndex(), strength);
         }
       }
-      strength -= 5;
+      strength /= 2;
     }
     
-    this->decrementPharamones();
+    // this->decrementPharamones();
     
-    this->generateLinksPharamone();
+    // this->generateLinksPharamone();
 
+    // this->solveStep++;
+    // this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
+    // if (this->solveStep >= this->totalSolutions)
+    // {
+    //   this->solveStep = 0;
+    //   this->setState(solved);
+    // }
+  } 
+  
+  void generateLinksBestAntTest(std::vector<Node> path)
+  {
+    this->links.clear();
+
+    for (int i=0; i<path.size(); i++)
+    {
+      Node currentNode = path[i];
+      int currentx = currentNode.getx();
+      int currenty = currentNode.gety();
+      
+      sf::RectangleShape link;
+      link.setPosition(sf::Vector2f(currentx+1, currenty));
+      link.setFillColor(sf::Color(255, 255, 255, 80));
+
+      if (i == path.size()-1)
+      {
+        Node firstNode = path[0];
+        int firstx = firstNode.getx();
+        int firsty = firstNode.gety();
+        
+        float xlen, ylen, hypotenuse;
+        
+        if (currentx < firstx)
+        {
+          xlen = firstx - currentx;
+          ylen = firsty - currenty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(hypotenuse, 2));
+        }
+        else
+        {
+          xlen = currentx - firstx;
+          ylen = currenty - firsty;
+          hypotenuse = this->findHypotenuse(xlen, ylen);
+          link.setSize(sf::Vector2f(-hypotenuse, 2));
+        }
+
+        float angle = this->findAngle(xlen, ylen);
+        
+        link.setRotation(angle);
+
+        this->links.push_back(link);
+        break;
+      }
+      
+      Node nextNode = path[i+1];
+      int nextx = nextNode.getx();
+      int nexty = nextNode.gety();
+      
+      float xlen, ylen, hypotenuse;
+      
+      if (currentx < nextx)
+      {
+        xlen = nextx - currentx;
+        ylen = nexty - currenty;
+        hypotenuse = this->findHypotenuse(xlen, ylen);
+        link.setSize(sf::Vector2f(hypotenuse, 2));
+      }
+      else
+      {
+        xlen = currentx - nextx;
+        ylen = currenty - nexty;
+        hypotenuse = this->findHypotenuse(xlen, ylen);
+        link.setSize(sf::Vector2f(-hypotenuse, 2));
+      }
+
+      float angle = this->findAngle(xlen, ylen);
+            
+      link.setRotation(angle);
+      
+      this->links.push_back(link);
+    }
+  }
+  
+  void increaseSolveStep()
+  {
     this->solveStep++;
     this->searchedSolutionsVal.setString(std::to_string(this->solveStep));
     if (this->solveStep >= this->totalSolutions)
@@ -1075,7 +1174,7 @@ private:
       this->solveStep = 0;
       this->setState(solved);
     }
-  } 
+  }
   
   void initPharamones()
   {
