@@ -192,7 +192,7 @@ private:
     }
     else if (this->state == tweakAnt && newState == solvingAnt)
     {
-      this->window->setFramerateLimit(30);
+      this->window->setFramerateLimit(40);
       this->initPharamones();
       this->colBG = sf::Color(20, 20, 26, 255);
       this->UIShader.setSize(sf::Vector2f(200, 100));
@@ -214,7 +214,7 @@ private:
     else if (this->state == build && newState == solvingAnt)
     {
       this->initPharamones();
-      this->window->setFramerateLimit(3);
+      this->window->setFramerateLimit(40);
       this->state = solvingAnt;
     }
     else if (this->state == solving && newState == solved)
@@ -963,9 +963,9 @@ private:
           ylen = abs(firsty - nexty);
           distance = this->findHypotenuse(xlen, ylen);
 
-          // nextNode->setDesirability(distance, desirabilityModifier, this->getPharamones(firstNode.getIndex(), nextNode->getIndex()));
+          nextNode->setDesirability(distance, desirabilityModifier, this->getPharamones(firstNode.getOriginalIndex(), nextNode->getOriginalIndex()));
           // nextNode->setDesirability(distance, desirabilityModifier, 1);
-          nextNode->setDesirability(distance, desirabilityModifier, this->pharamones[firstNode.getOtherIndex()][nextNode->getOtherIndex()]);
+          // nextNode->setDesirability(distance, desirabilityModifier, this->pharamones[firstNode.getOriginalIndex()][nextNode->getOriginalIndex()]);
           // std::cout << this->nodes[j].getDesirability() << ", ";
         }
       }
@@ -979,7 +979,7 @@ private:
       std::vector<Node> unvisitedNodes = this->nodes;
       unvisitedNodes.erase(unvisitedNodes.begin());
       
-      for (int j=0; j<unvisitedNodes.size()-1; j++)
+      for (int j=0; j<unvisitedNodes.size(); j++)
       {
         unvisitedNodes[j].decrementIndex();
       }
@@ -988,15 +988,16 @@ private:
       currentPath.push_back(firstNode);
       
       // the ants then randomely select a node to travel to based on its desirability until all nodes are explored
-      do {
+      while (unvisitedNodes.size() > 0) {
         float bestDesirability = 0.f;
         Node *bestNode;
         for (int k=1; k<unvisitedNodes.size(); k++)
         {
           std::random_device rd2;
           std::default_random_engine eng2(rd2());
-          std::uniform_int_distribution<int> distr2(1, 2);
-          int randomModifier = distr2(eng2);
+          std::uniform_int_distribution<int> distr2(1, 3);
+          float randomModifierTemp = distr2(eng2);
+          float randomModifier = (randomModifierTemp / 5) * 10;
 
           // float total = desirabilityChance * randomModifier * unvisitedNodes[k].getDesirability();
           float total = randomModifier * unvisitedNodes[k].getDesirability();
@@ -1015,7 +1016,7 @@ private:
         }
 
         unvisitedNodes.erase(unvisitedNodes.begin() + bestNode->getIndex());
-      } while (unvisitedNodes.size() > 0);
+      }
       
       // for (int j=0; j<currentPath.size(); j++)
       // {
@@ -1071,13 +1072,14 @@ private:
     {
       for (int j=0; j<antPaths[i].size(); j++)
       {
+        // std::cout << antPaths[i][j].getIndex() << ", " << antPaths[i][j].getOriginalIndex() << std::endl;
         if (j < antPaths[i].size()-1)
         {
           // this->pharamones[antPaths[i][j].getIndex()][antPaths[i][j+1].getIndex()] = strength;
-          this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][j+1].getIndex(), strength);
+          this->setPharamones(antPaths[i][j].getOriginalIndex(), antPaths[i][j+1].getOriginalIndex(), strength);
         } else {
           // this->pharamones[antPaths[i][j].getIndex()][antPaths[i][0].getIndex()] = strength;
-          this->setPharamones(antPaths[i][j].getIndex(), antPaths[i][0].getIndex(), strength);
+          this->setPharamones(antPaths[i][j].getOriginalIndex(), antPaths[i][0].getOriginalIndex(), strength);
         }
       }
       strength /= 2;
@@ -1210,15 +1212,15 @@ private:
     }
   }
   
-  // float getPharamones(int i, int j)
-  // {
-  //   if (i < j)
-  //   {
-  //     return this->pharamones[i][j];
-  //   } else {
-  //     return this->pharamones[j][i];
-  //   }
-  // }
+  float getPharamones(int i, int j)
+  {
+    if (i < j)
+    {
+      return this->pharamones[i][j];
+    } else {
+      return this->pharamones[j][i];
+    }
+  }
   
   void setPharamones(int i, int j, float value)
   {
